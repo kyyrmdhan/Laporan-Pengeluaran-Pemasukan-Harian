@@ -1,0 +1,2599 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Catatan — Keuangan Harian</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ============ TOKENS ============ */
+  :root{
+    --bg:#FAFAF7;
+    --bg-elev:#FFFFFF;
+    --bg-sheet:#FFFFFF;
+    --ink:#1C1B19;
+    --ink-soft:#6B6A66;
+    --ink-faint:#A5A39D;
+    --border:#E9E7E1;
+    --accent:#3E5C55;
+    --accent-ink:#FFFFFF;
+    --accent-soft:#E7EEEB;
+    --in:#3E7A5C;
+    --in-bg:#EAF3EE;
+    --out:#A24E38;
+    --out-bg:#F6EAE6;
+    --danger:#B23B3B;
+    --shadow:0 1px 2px rgba(28,27,25,.05), 0 6px 20px rgba(28,27,25,.06);
+    --radius-lg:18px;
+    --radius-md:12px;
+    --radius-sm:8px;
+    color-scheme:light;
+  }
+  [data-theme="dark"]{
+    --bg:#15161A;
+    --bg-elev:#1E2024;
+    --bg-sheet:#1E2024;
+    --ink:#EEEDE9;
+    --ink-soft:#9A9A96;
+    --ink-faint:#67666B;
+    --border:#2B2D32;
+    --accent:#7CA99A;
+    --accent-ink:#12211C;
+    --accent-soft:#20302B;
+    --in:#7CBE9C;
+    --in-bg:#1C2A22;
+    --out:#D68666;
+    --out-bg:#2D211C;
+    --danger:#D9776F;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+    color-scheme:dark;
+  }
+
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+    transition:background .25s ease, color .25s ease;
+  }
+  .num{font-family:'Space Grotesk',monospace; font-variant-numeric:tabular-nums; letter-spacing:-0.01em;}
+  button{font-family:inherit; cursor:pointer;}
+  input,select{font-family:inherit;}
+
+  /* ============ SHELL ============ */
+  .shell{
+    max-width:520px;
+    margin:0 auto;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    background:var(--bg);
+  }
+  header.topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:20px 20px 8px;
+  }
+  .brand{display:flex; flex-direction:column; gap:2px;}
+  .brand-name{font-weight:700; font-size:17px; letter-spacing:-0.01em;}
+  .brand-date{font-size:12.5px; color:var(--ink-soft);}
+  .theme-toggle{
+    width:38px; height:38px; border-radius:999px;
+    border:1px solid var(--border); background:var(--bg-elev);
+    display:flex; align-items:center; justify-content:center;
+    color:var(--ink-soft);
+  }
+  .theme-toggle svg{width:17px; height:17px;}
+
+  main{flex:1; padding:4px 20px 100px;}
+  .view{display:none;}
+  .view.active{display:block; animation:fadeIn .2s ease;}
+  @keyframes fadeIn{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
+
+  /* ============ PERIOD PILLS ============ */
+  .period-row{
+    display:flex; gap:6px; margin:14px 0 18px;
+    background:var(--bg-elev); border:1px solid var(--border);
+    border-radius:999px; padding:4px;
+  }
+  .period-pill{
+    flex:1; text-align:center; padding:8px 4px; border-radius:999px;
+    border:none; background:transparent; color:var(--ink-soft);
+    font-size:13px; font-weight:500;
+  }
+  .period-pill.active{background:var(--accent); color:var(--accent-ink); font-weight:600;}
+
+  /* ============ BALANCE CARD ============ */
+  .balance-card{
+    background:var(--bg-elev);
+    border:1px solid var(--border);
+    border-radius:var(--radius-lg);
+    padding:24px 22px;
+    box-shadow:var(--shadow);
+  }
+  .balance-label{font-size:12.5px; color:var(--ink-soft); font-weight:500;}
+  .balance-value{
+    font-size:34px; font-weight:700; margin-top:6px;
+    letter-spacing:-0.02em; line-height:1.1;
+  }
+  .ledger-rule{
+    display:flex; align-items:center; gap:6px;
+    margin:18px 0 14px; height:1px;
+  }
+  .ledger-rule .tick{flex:1; height:1px; background:var(--border);}
+  .ledger-rule .tick-mark{width:1px; height:6px; background:var(--border);}
+
+  .summary-row{display:flex; gap:10px;}
+  .summary-cell{flex:1;}
+  .summary-label{
+    display:flex; align-items:center; gap:6px;
+    font-size:12px; color:var(--ink-soft); font-weight:500; margin-bottom:4px;
+  }
+  .dot{width:6px; height:6px; border-radius:999px;}
+  .dot.in{background:var(--in);}
+  .dot.out{background:var(--out);}
+  .summary-value{font-size:17px; font-weight:600;}
+  .summary-value.in{color:var(--in);}
+  .summary-value.out{color:var(--out);}
+
+  /* ============ SALDO SPLIT (CASH / REKENING) ============ */
+  .balance-split-row{
+    display:flex; gap:8px; margin-top:12px;
+  }
+  .balance-split-cell{
+    flex:1; display:flex; align-items:center; justify-content:space-between; gap:6px;
+    background:var(--accent-soft);
+    border-radius:var(--radius-sm);
+    padding:8px 10px;
+  }
+  .balance-split-label{
+    display:flex; align-items:center; gap:6px;
+    font-size:11.5px; color:var(--ink-soft); font-weight:500;
+  }
+  .balance-split-label svg{width:13px; height:13px; color:var(--accent);}
+  .balance-split-value{font-size:13px; font-weight:600; color:var(--ink);}
+
+  /* ============ ADD BUTTON (dashboard, inline) ============ */
+  .add-btn{
+    width:100%; margin-top:16px;
+    background:var(--accent); color:var(--accent-ink);
+    border:none; border-radius:var(--radius-md);
+    padding:14px; font-size:15px; font-weight:600;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .btn-row{display:flex; gap:8px; margin-top:16px;}
+  .btn-row .add-btn{margin-top:0;}
+  .share-btn{
+    width:100%; background:var(--bg-elev); color:var(--ink);
+    border:1px solid var(--border); border-radius:var(--radius-md);
+    padding:14px; font-size:14.5px; font-weight:600;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .share-btn svg{width:16px; height:16px; color:#25D366;}
+
+  /* ============ SAVINGS CARD (UANG TABUNGAN) ============ */
+  .savings-card{
+    background:var(--bg-elev); border:1px solid var(--border);
+    border-radius:var(--radius-lg); padding:16px 18px;
+    margin-top:12px;
+  }
+  .savings-card-label{
+    display:flex; align-items:center; gap:8px;
+    font-size:12.5px; font-weight:500; color:var(--ink-soft);
+  }
+  .savings-card-label svg{width:15px; height:15px; color:var(--accent);}
+  .savings-card-value{font-size:22px; font-weight:700; margin-top:6px; letter-spacing:-0.02em;}
+  .savings-card-note{font-size:12px; color:var(--ink-faint); margin-top:6px;}
+
+  /* ============ DAILY LIMIT CARD ============ */
+  .limit-card{
+    background:var(--bg-elev); border:1px solid var(--border);
+    border-radius:var(--radius-lg); padding:16px 18px;
+    margin-top:12px;
+  }
+  .limit-top{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:8px;}
+  .limit-title{font-size:12.5px; font-weight:500; color:var(--ink-soft);}
+  .limit-count{font-size:12.5px; font-weight:600;}
+  .limit-count .num{font-family:'Space Grotesk',monospace;}
+  .limit-bar-track{height:7px; border-radius:999px; background:var(--border); overflow:hidden;}
+  .limit-bar-fill{height:100%; border-radius:999px; background:var(--accent); transition:width .25s ease, background .25s ease;}
+  .limit-bar-fill.warn{background:var(--out);}
+  .limit-bar-fill.over{background:var(--danger);}
+  .limit-note{font-size:12px; color:var(--ink-soft); margin-top:8px;}
+  .limit-note.over{color:var(--danger); font-weight:500;}
+  .limit-sep{height:1px; background:var(--border); margin:14px 0;}
+
+  /* ============ CATEGORY GROUPS ============ */
+  .group-block{margin-bottom:10px;}
+  .group-head{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 2px; margin-bottom:8px;
+  }
+  .group-name{font-size:13px; font-weight:600; color:var(--ink);}
+  .group-total{font-size:12.5px; font-weight:600; color:var(--ink-soft);}
+  .group-total.in{color:var(--in);}
+  .group-total.out{color:var(--out);}
+
+  /* ============ SECTION HEADERS ============ */
+  .section-head{
+    display:flex; align-items:center; justify-content:space-between;
+    margin:26px 0 12px;
+  }
+  .section-title{font-size:14px; font-weight:600; color:var(--ink);}
+  .section-link{font-size:12.5px; color:var(--ink-soft); background:none; border:none; padding:0;}
+
+  /* ============ TRANSACTION LIST ============ */
+  .tx-list{display:flex; flex-direction:column; gap:8px;}
+  .tx-item{
+    display:flex; align-items:center; gap:12px;
+    background:var(--bg-elev);
+    border:1px solid var(--border);
+    border-left:3px solid var(--border);
+    border-radius:var(--radius-md);
+    padding:13px 14px;
+  }
+  .tx-item.in{border-left-color:var(--in);}
+  .tx-item.out{border-left-color:var(--out);}
+  .tx-info{flex:1; min-width:0;}
+  .tx-note{font-size:14.5px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .tx-meta{font-size:12px; color:var(--ink-soft); margin-top:2px;}
+  .tx-amount{font-size:15px; font-weight:600; white-space:nowrap;}
+  .tx-amount.in{color:var(--in);}
+  .tx-amount.out{color:var(--out);}
+  .tx-actions{display:flex; gap:4px;}
+  .icon-btn{
+    width:30px; height:30px; border-radius:var(--radius-sm);
+    border:none; background:transparent; color:var(--ink-faint);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .icon-btn:active{background:var(--border);}
+  .icon-btn svg{width:15px; height:15px;}
+
+  /* ============ EMPTY STATE ============ */
+  .empty-state{
+    text-align:center; padding:48px 20px;
+    color:var(--ink-soft);
+  }
+  .empty-state .em-title{font-size:15px; font-weight:600; color:var(--ink); margin-bottom:6px;}
+  .empty-state .em-sub{font-size:13px; margin-bottom:18px; line-height:1.5;}
+  .empty-state button{
+    background:var(--accent); color:var(--accent-ink); border:none;
+    padding:11px 20px; border-radius:var(--radius-md); font-size:14px; font-weight:600;
+  }
+
+  /* ============ FILTERS (Riwayat) ============ */
+  .filter-block{display:flex; flex-direction:column; gap:10px; margin-bottom:16px;}
+  .search-input{
+    width:100%; padding:11px 14px; border-radius:var(--radius-md);
+    border:1px solid var(--border); background:var(--bg-elev); color:var(--ink);
+    font-size:14px; outline:none;
+  }
+  .search-input::placeholder{color:var(--ink-faint);}
+  .filter-chips{display:flex; gap:8px; flex-wrap:wrap;}
+  .chip{
+    padding:7px 13px; border-radius:999px; border:1px solid var(--border);
+    background:var(--bg-elev); color:var(--ink-soft); font-size:12.5px; font-weight:500;
+  }
+  .chip.active{background:var(--accent-soft); border-color:var(--accent); color:var(--accent);}
+  .date-picker-row{display:flex; align-items:center; gap:8px;}
+  .date-picker-row input[type="date"]{
+    padding:9px 10px; border-radius:var(--radius-sm); border:1px solid var(--border);
+    background:var(--bg-elev); color:var(--ink); font-size:13px;
+  }
+
+  /* ============ STATS ============ */
+  .stat-card{
+    background:var(--bg-elev); border:1px solid var(--border);
+    border-radius:var(--radius-lg); padding:20px; box-shadow:var(--shadow);
+    margin-bottom:16px;
+  }
+  .stat-label{font-size:12.5px; color:var(--ink-soft); font-weight:500;}
+
+  /* --- Comparison bars (Masuk vs Keluar) --- */
+  .compare-row{margin-bottom:16px;}
+  .compare-row:last-child{margin-bottom:0;}
+  .compare-top{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:6px;}
+  .compare-label{display:flex; align-items:center; gap:6px; font-size:13px; font-weight:500;}
+  .compare-value{font-size:16px; font-weight:700;}
+  .bar-track{height:8px; border-radius:999px; background:var(--border); overflow:hidden;}
+  .bar-fill{height:100%; border-radius:999px; background:var(--accent); width:0%; transition:width 1s cubic-bezier(.2,.8,.2,1);}
+  .bar-fill.in{background:var(--in);}
+  .bar-fill.out{background:var(--out);}
+
+  /* --- Donut chart --- */
+  .donut-wrap{
+    position:relative; width:180px; height:180px;
+    margin:6px auto 22px; display:flex; align-items:center; justify-content:center;
+  }
+  .donut-wrap svg{width:180px; height:180px; display:block;}
+  .donut-center{
+    position:absolute; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; text-align:center; pointer-events:none;
+  }
+  .donut-center-value{font-size:19px; font-weight:700; letter-spacing:-0.01em;}
+  .donut-center-label{font-size:11px; color:var(--ink-soft); margin-top:2px;}
+
+  .legend-list{display:flex; flex-direction:column; gap:12px;}
+  .legend-row{display:flex; align-items:center; gap:10px;}
+  .legend-dot{width:10px; height:10px; border-radius:3px; flex-shrink:0;}
+  .legend-info{flex:1; min-width:0;}
+  .legend-top{display:flex; justify-content:space-between; font-size:13.5px; margin-bottom:4px;}
+  .legend-cat{font-weight:500;}
+  .legend-amt{color:var(--ink-soft); font-weight:500; font-family:'Space Grotesk',monospace;}
+  .legend-track{height:5px; border-radius:999px; background:var(--border); overflow:hidden;}
+  .legend-fill{height:100%; border-radius:999px; width:0%; transition:width .9s cubic-bezier(.2,.8,.2,1);}
+  .legend-pct{font-size:11.5px; color:var(--ink-faint); margin-left:8px; flex-shrink:0;}
+
+  /* ============ MINI/BAR CHART (kategori) ============ */
+  .barchart-wrap{display:flex; flex-direction:column; gap:11px;}
+  .barchart-row{display:flex; align-items:center; gap:10px;}
+  .barchart-label{
+    width:96px; flex-shrink:0; font-size:12px; font-weight:500; color:var(--ink-soft);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .barchart-track{flex:1; height:14px; border-radius:7px; background:var(--border); overflow:hidden;}
+  .barchart-fill{height:100%; border-radius:7px; width:0%; transition:width .9s cubic-bezier(.2,.8,.2,1);}
+  .barchart-amt{
+    width:80px; flex-shrink:0; text-align:right; font-size:11.5px; color:var(--ink-soft);
+    font-family:'Space Grotesk',monospace; font-weight:500;
+  }
+  .barchart-empty{font-size:13px; color:var(--ink-faint); text-align:center; padding:10px 0;}
+
+  /* ============ TREND / LINE CHART ============ */
+  .linechart-wrap{margin:2px 0 4px;}
+  .linechart-svg{width:100%; height:150px; display:block; overflow:visible;}
+  .linechart-legend{display:flex; flex-wrap:wrap; gap:8px 14px; margin-top:14px;}
+  .linechart-legend-item{display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--ink-soft); font-weight:500;}
+  .linechart-legend-dot{width:8px; height:8px; border-radius:3px; flex-shrink:0;}
+  .linechart-axis-label{font-size:9.5px; fill:var(--ink-faint); font-family:'Inter',sans-serif;}
+  .linechart-point{transition:r .15s ease;}
+
+  /* ============ BOTTOM NAV ============ */
+  .bottom-nav{
+    position:fixed; bottom:0; left:0; right:0;
+    background:var(--bg-elev); border-top:1px solid var(--border);
+    max-width:520px; margin:0 auto;
+    display:flex; align-items:center; justify-content:space-around;
+    padding:8px 12px calc(8px + env(safe-area-inset-bottom));
+    z-index:40;
+  }
+  .nav-item{
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    background:none; border:none; color:var(--ink-faint);
+    font-size:11px; font-weight:500; padding:6px 18px; border-radius:var(--radius-sm);
+  }
+  .nav-item svg{width:20px; height:20px;}
+  .nav-item.active{color:var(--accent);}
+  .fab{
+    position:fixed; left:50%; transform:translateX(-50%);
+    bottom:calc(38px + env(safe-area-inset-bottom));
+    width:54px; height:54px; border-radius:999px;
+    background:var(--accent); color:var(--accent-ink); border:none;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 4px 16px rgba(0,0,0,.2);
+    z-index:41;
+  }
+  .fab svg{width:24px; height:24px;}
+
+  /* ============ SHEET / MODAL ============ */
+  .overlay{
+    position:fixed; inset:0; background:rgba(15,15,14,.42);
+    display:none; align-items:flex-end; justify-content:center;
+    z-index:100;
+  }
+  .overlay.open{display:flex; animation:overlayIn .18s ease;}
+  @keyframes overlayIn{from{opacity:0;} to{opacity:1;}}
+  .sheet{
+    background:var(--bg-sheet); width:100%; max-width:520px;
+    border-radius:22px 22px 0 0; padding:10px 20px calc(24px + env(safe-area-inset-bottom));
+    max-height:88vh; overflow-y:auto;
+    animation:sheetUp .22s cubic-bezier(.2,.8,.2,1);
+  }
+  @keyframes sheetUp{from{transform:translateY(24px); opacity:.6;} to{transform:translateY(0); opacity:1;}}
+  .sheet-handle{width:36px; height:4px; background:var(--border); border-radius:999px; margin:6px auto 16px;}
+  .sheet-title{font-size:17px; font-weight:700; margin-bottom:18px;}
+
+  .type-toggle{display:flex; gap:8px; margin-bottom:16px;}
+  .type-btn{
+    flex:1; padding:12px; border-radius:var(--radius-md);
+    border:1px solid var(--border); background:var(--bg-elev); color:var(--ink-soft);
+    font-size:14px; font-weight:600;
+  }
+  .type-btn.sel-in.active{background:var(--in-bg); border-color:var(--in); color:var(--in);}
+  .type-btn.sel-out.active{background:var(--out-bg); border-color:var(--out); color:var(--out);}
+  .type-btn.sel-neutral.active{background:var(--accent-soft); border-color:var(--accent); color:var(--accent);}
+
+  .field{margin-bottom:14px;}
+  .field label{display:block; font-size:12.5px; font-weight:500; color:var(--ink-soft); margin-bottom:6px;}
+  .field input, .field select, .field textarea{
+    width:100%; padding:12px 14px; border-radius:var(--radius-md);
+    border:1px solid var(--border); background:var(--bg-elev); color:var(--ink);
+    font-size:15px; outline:none;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus{border-color:var(--accent);}
+  .field textarea{resize:none; min-height:44px; font-family:inherit;}
+  .nominal-input{font-family:'Space Grotesk',monospace; font-weight:600; font-size:19px !important;}
+  .field-error{font-size:12px; color:var(--danger); margin-top:5px; display:none;}
+  .field.has-error input, .field.has-error select{border-color:var(--danger);}
+  .field.has-error .field-error{display:block;}
+
+  .save-btn{
+    width:100%; padding:14px; border-radius:var(--radius-md); border:none;
+    background:var(--accent); color:var(--accent-ink); font-size:15px; font-weight:600;
+    margin-top:6px;
+  }
+  .cancel-link{
+    width:100%; text-align:center; padding:12px; background:none; border:none;
+    color:var(--ink-soft); font-size:14px; margin-top:4px;
+  }
+
+  /* confirm dialog */
+  .confirm-box{
+    background:var(--bg-sheet); border-radius:var(--radius-lg);
+    padding:22px; width:88%; max-width:340px; margin:auto;
+    box-shadow:var(--shadow);
+  }
+  .confirm-title{font-size:15.5px; font-weight:700; margin-bottom:6px;}
+  .confirm-sub{font-size:13.5px; color:var(--ink-soft); margin-bottom:18px; line-height:1.5;}
+  .confirm-actions{display:flex; gap:10px;}
+  .confirm-actions button{
+    flex:1; padding:11px; border-radius:var(--radius-md); font-size:14px; font-weight:600; border:none;
+  }
+  .btn-ghost{background:var(--bg-elev); border:1px solid var(--border) !important; color:var(--ink);}
+  .btn-danger{background:var(--danger); color:#fff;}
+
+  .center-overlay{align-items:center;}
+
+  /* ============ TOAST ============ */
+  .toast{
+    position:fixed; left:50%; bottom:96px; transform:translateX(-50%) translateY(20px);
+    background:var(--ink); color:var(--bg); padding:12px 20px; border-radius:16px;
+    font-size:13.5px; font-weight:500; opacity:0; pointer-events:none;
+    transition:all .25s ease; z-index:200; text-align:center;
+    max-width:82vw; line-height:1.4;
+  }
+  [data-theme="dark"] .toast{background:var(--accent); color:var(--accent-ink);}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  /* ============ UTANG & PIUTANG ============ */
+  .badge{
+    display:inline-flex; align-items:center; padding:3px 9px; border-radius:999px;
+    font-size:11px; font-weight:600; white-space:nowrap;
+  }
+  .badge.belum{background:var(--out-bg); color:var(--out);}
+  .badge.lunas{background:var(--in-bg); color:var(--in);}
+
+  .debt-list{display:flex; flex-direction:column; gap:10px;}
+  .debt-item{
+    display:flex; flex-direction:column; gap:10px;
+    background:var(--bg-elev); border:1px solid var(--border);
+    border-left:3px solid var(--border);
+    border-radius:var(--radius-md); padding:14px;
+  }
+  .debt-item.piutang{border-left-color:var(--in);}
+  .debt-item.utang{border-left-color:var(--out);}
+  .debt-top{display:flex; align-items:flex-start; justify-content:space-between; gap:10px;}
+  .debt-name-wrap{min-width:0;}
+  .debt-name{font-size:14.5px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .debt-sub{font-size:12px; color:var(--ink-soft); margin-top:3px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;}
+  .debt-amount-wrap{text-align:right; flex-shrink:0;}
+  .debt-amount{font-size:15.5px; font-weight:700; white-space:nowrap;}
+  .debt-amount.piutang{color:var(--in);}
+  .debt-amount.utang{color:var(--out);}
+  .debt-amount-total{font-size:11px; color:var(--ink-faint); margin-top:2px;}
+  .debt-progress-track{height:6px; border-radius:999px; background:var(--border); overflow:hidden;}
+  .debt-progress-fill{height:100%; border-radius:999px; background:var(--accent); transition:width .4s ease;}
+  .debt-progress-fill.piutang{background:var(--in);}
+  .debt-progress-fill.utang{background:var(--out);}
+  .debt-note{font-size:12.5px; color:var(--ink-soft); line-height:1.4;}
+  .debt-actions{display:flex; gap:8px;}
+  .debt-actions button{
+    flex:1; padding:9px; border-radius:var(--radius-sm); font-size:12.5px; font-weight:600;
+    border:1px solid var(--border); background:var(--bg-elev); color:var(--ink);
+    display:flex; align-items:center; justify-content:center; gap:5px;
+  }
+  .debt-actions button svg{width:13px; height:13px;}
+  .debt-actions button.primary{background:var(--accent); color:var(--accent-ink); border-color:var(--accent);}
+  .debt-actions button.danger{color:var(--danger); border-color:var(--danger);}
+  .debt-actions button[disabled]{opacity:.45; pointer-events:none;}
+
+  .debt-summary-row{display:flex; gap:10px; margin-top:4px;}
+
+  @media (min-width:600px){
+    .bottom-nav{border-radius:0 0 0 0;}
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-name">Catatan</div>
+      <div class="brand-date" id="todayLabel"></div>
+    </div>
+    <button class="theme-toggle" id="themeToggle" aria-label="Ganti tema">
+      <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+  </header>
+
+  <main>
+
+    <!-- ================= BERANDA ================= -->
+    <section class="view active" id="view-beranda">
+
+      <div class="period-row" id="periodRow">
+        <button class="period-pill" data-period="today">Hari ini</button>
+        <button class="period-pill" data-period="week">Minggu ini</button>
+        <button class="period-pill active" data-period="month">Bulan ini</button>
+      </div>
+
+      <div class="balance-card">
+        <div class="balance-label">Saldo</div>
+        <div class="balance-value num" id="balanceValue">Rp0</div>
+
+        <div class="balance-split-row">
+          <div class="balance-split-cell">
+            <div class="balance-split-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 6V5a1 1 0 0 1 1-1h9"/></svg>
+              Cash
+            </div>
+            <div class="balance-split-value num" id="balanceCashValue">Rp0</div>
+          </div>
+          <div class="balance-split-cell">
+            <div class="balance-split-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10 12 4l9 6"/><path d="M5 10v9M19 10v9M9 10v9M15 10v9"/><path d="M3 19h18"/></svg>
+              Rekening
+            </div>
+            <div class="balance-split-value num" id="balanceRekeningValue">Rp0</div>
+          </div>
+        </div>
+
+        <div class="ledger-rule">
+          <div class="tick"></div><div class="tick-mark"></div><div class="tick-mark"></div><div class="tick-mark"></div><div class="tick"></div>
+        </div>
+
+        <div class="summary-row">
+          <div class="summary-cell">
+            <div class="summary-label"><span class="dot in"></span>Uang Masuk</div>
+            <div class="summary-value in num" id="incomeValue">Rp0</div>
+          </div>
+          <div class="summary-cell">
+            <div class="summary-label"><span class="dot out"></span>Uang Keluar</div>
+            <div class="summary-value out num" id="expenseValue">Rp0</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="savings-card" id="savingsCard">
+        <div class="savings-card-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.5-11 5 0 1.8 1 3 2 3.5V19h3v-2h3v2h3v-3.5c1.3-.5 2-1.5 2.5-3H21v-3h-1.5c-.3-1-1-2.5-2.5-2.5V5z"/><circle cx="8" cy="12" r="1"/></svg>
+          <span>Uang Tabungan</span>
+        </div>
+        <div class="savings-card-value num" id="savingsValue">Rp0</div>
+        <div class="savings-card-note">Terpisah dari saldo utama · setor lewat kategori Lainnya</div>
+      </div>
+
+      <div class="limit-card" id="limitCard">
+        <div class="limit-top">
+          <div class="limit-title">Makan Hari Ini · Iky</div>
+          <div class="limit-count"><span class="num" id="limitSpentIky">Rp0</span> <span style="color:var(--ink-faint);">/ <span class="num" id="limitMaxIky">Rp50.000</span></span></div>
+        </div>
+        <div class="limit-bar-track"><div class="limit-bar-fill" id="limitBarFillIky" style="width:0%"></div></div>
+        <div class="limit-note" id="limitNoteIky">Sisa batas hari ini: Rp50.000</div>
+
+        <div class="limit-sep"></div>
+
+        <div class="limit-top">
+          <div class="limit-title">Makan Hari Ini · Dhea</div>
+          <div class="limit-count"><span class="num" id="limitSpentDhea">Rp0</span> <span style="color:var(--ink-faint);">/ <span class="num" id="limitMaxDhea">Rp50.000</span></span></div>
+        </div>
+        <div class="limit-bar-track"><div class="limit-bar-fill" id="limitBarFillDhea" style="width:0%"></div></div>
+        <div class="limit-note" id="limitNoteDhea">Sisa batas hari ini: Rp50.000</div>
+
+        <div class="limit-sep"></div>
+
+        <div class="limit-top" style="margin-bottom:0;">
+          <div class="limit-title">Pengeluaran Lain Hari Ini</div>
+          <div class="limit-count"><span class="num" id="otherSpent">Rp0</span></div>
+        </div>
+        <div class="limit-note" id="limitNoteUnknown" style="display:none; margin-top:8px;"></div>
+      </div>
+
+      <div class="limit-card" id="debtSummaryCard">
+        <div class="limit-top">
+          <div class="limit-title">Utang & Piutang</div>
+          <button class="section-link" id="goDebtLink">Lihat semua</button>
+        </div>
+        <div class="debt-summary-row">
+          <div class="summary-cell">
+            <div class="summary-label"><span class="dot in"></span>Piutang (akan diterima)</div>
+            <div class="summary-value in num" id="debtReceivableValue">Rp0</div>
+          </div>
+          <div class="summary-cell">
+            <div class="summary-label"><span class="dot out"></span>Utang (harus dibayar)</div>
+            <div class="summary-value out num" id="debtPayableValue">Rp0</div>
+          </div>
+        </div>
+      </div>
+
+      <button class="add-btn" id="addBtnDashboard">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        Tambah Transaksi
+      </button>
+
+      <button class="share-btn" id="shareDashboardBtn" style="margin-top:8px;">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.36 5.07L2 22l5.06-1.33C8.51 21.52 10.2 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.7 0-3.3-.46-4.66-1.28l-.33-.2-3.44.9.92-3.35-.22-.35C3.5 14.16 3 12.61 3 11 3 6.58 6.58 3 11 3h1c4.42 0 9 3.58 9 8s-4.58 9-9 9z"/><path d="M16.3 13.6c-.26-.13-1.53-.75-1.77-.84-.24-.09-.41-.13-.58.13-.17.26-.67.84-.82 1.01-.15.17-.3.19-.56.06-.26-.13-1.08-.4-2.06-1.27-.76-.68-1.28-1.51-1.43-1.77-.15-.26-.02-.4.11-.53.11-.11.26-.3.39-.44.13-.15.17-.26.26-.43.09-.17.04-.32-.02-.45-.06-.13-.58-1.39-.79-1.9-.21-.5-.42-.43-.58-.44h-.5c-.17 0-.44.06-.67.32-.23.26-.88.86-.88 2.1s.9 2.44 1.03 2.61c.13.17 1.77 2.7 4.29 3.79.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.53-.62 1.75-1.23.22-.6.22-1.11.15-1.22-.06-.11-.24-.17-.5-.3z"/></svg>
+        Bagikan via WhatsApp
+      </button>
+
+      <div class="stat-card" id="miniCatCard" style="margin-top:18px;">
+        <div class="stat-label" style="margin-bottom:12px;">Pengeluaran per Kategori · <span id="miniCatPeriodLabel">Bulan ini</span></div>
+        <div class="barchart-wrap" id="miniCatChart"></div>
+      </div>
+
+      <div class="section-head">
+        <div class="section-title">Transaksi Terbaru</div>
+        <button class="section-link" id="goHistoryLink">Lihat semua</button>
+      </div>
+      <div class="tx-list" id="recentList"></div>
+
+    </section>
+
+    <!-- ================= TRANSAKSI ================= -->
+    <section class="view" id="view-transaksi">
+      <div class="section-head" style="margin-top:16px;">
+        <div class="section-title">Riwayat Transaksi</div>
+      </div>
+
+      <div class="filter-block">
+        <input type="text" class="search-input" id="searchInput" placeholder="Cari catatan atau kategori…">
+        <div class="filter-chips" id="typeChips">
+          <button class="chip active" data-type="all">Semua</button>
+          <button class="chip" data-type="masuk">Masuk</button>
+          <button class="chip" data-type="keluar">Keluar</button>
+        </div>
+        <div class="filter-chips" id="periodChips">
+          <button class="chip active" data-p="all">Semua waktu</button>
+          <button class="chip" data-p="today">Hari ini</button>
+          <button class="chip" data-p="week">Minggu ini</button>
+          <button class="chip" data-p="month">Bulan ini</button>
+          <button class="chip" data-p="pick">Pilih tanggal</button>
+        </div>
+        <div class="date-picker-row" id="datePickRow" style="display:none;">
+          <input type="date" id="datePick">
+          <button class="section-link" id="clearDatePick">Hapus filter tanggal</button>
+        </div>
+      </div>
+
+      <div class="tx-list" id="historyList"></div>
+    </section>
+
+    <!-- ================= STATISTIK ================= -->
+    <section class="view" id="view-statistik">
+      <div class="section-head" style="margin-top:16px;">
+        <div class="section-title">Statistik Bulan Ini</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="compare-row">
+          <div class="compare-top">
+            <div class="compare-label"><span class="dot in"></span>Uang Masuk</div>
+            <div class="compare-value in num" id="statIncome">Rp0</div>
+          </div>
+          <div class="bar-track"><div class="bar-fill in" id="statIncomeBar"></div></div>
+        </div>
+        <div class="compare-row">
+          <div class="compare-top">
+            <div class="compare-label"><span class="dot out"></span>Uang Keluar</div>
+            <div class="compare-value out num" id="statExpense">Rp0</div>
+          </div>
+          <div class="bar-track"><div class="bar-fill out" id="statExpenseBar"></div></div>
+        </div>
+      </div>
+
+      <div class="stat-card" id="breakdownCard">
+        <div class="stat-label" style="margin-bottom:4px;">Pengeluaran per Kategori</div>
+        <div class="donut-wrap">
+          <svg id="donutChart" viewBox="0 0 180 180"></svg>
+          <div class="donut-center">
+            <div class="donut-center-value num" id="donutTotal">Rp0</div>
+            <div class="donut-center-label">Total keluar</div>
+          </div>
+        </div>
+        <div class="legend-list" id="legendList"></div>
+      </div>
+
+      <div class="stat-card" id="barChartCard">
+        <div class="stat-label" style="margin-bottom:12px;">Perbandingan Kategori (Bulan Ini)</div>
+        <div class="barchart-wrap" id="categoryBarChart"></div>
+      </div>
+
+      <div class="stat-card" id="trendCard">
+        <div class="stat-label" style="margin-bottom:10px;">Tren Pengeluaran — 6 Bulan Terakhir</div>
+        <div class="linechart-wrap">
+          <svg id="trendChart" class="linechart-svg" viewBox="0 0 320 150" preserveAspectRatio="none"></svg>
+        </div>
+        <div class="linechart-legend" id="trendLegend"></div>
+      </div>
+    </section>
+
+    <!-- ================= UTANG & PIUTANG ================= -->
+    <section class="view" id="view-utang">
+      <div class="section-head" style="margin-top:16px;">
+        <div class="section-title">Utang & Piutang</div>
+      </div>
+
+      <div class="balance-card">
+        <div class="balance-label">Selisih Piutang − Utang</div>
+        <div class="balance-value num" id="debtNetValue">Rp0</div>
+
+        <div class="ledger-rule">
+          <div class="tick"></div><div class="tick-mark"></div><div class="tick-mark"></div><div class="tick-mark"></div><div class="tick"></div>
+        </div>
+
+        <div class="summary-row">
+          <div class="summary-cell">
+            <div class="summary-label"><span class="dot in"></span>Piutang</div>
+            <div class="summary-value in num" id="debtReceivableTotal">Rp0</div>
+          </div>
+          <div class="summary-cell">
+            <div class="summary-label"><span class="dot out"></span>Utang</div>
+            <div class="summary-value out num" id="debtPayableTotal">Rp0</div>
+          </div>
+        </div>
+      </div>
+
+      <button class="add-btn" id="addDebtBtn" style="margin-top:16px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        Tambah Utang / Piutang
+      </button>
+
+      <div class="filter-block" style="margin-top:18px;">
+        <div class="filter-chips" id="debtTypeChips">
+          <button class="chip active" data-dtype="all">Semua</button>
+          <button class="chip" data-dtype="piutang">Piutang ke saya</button>
+          <button class="chip" data-dtype="utang">Utang saya</button>
+        </div>
+        <div class="filter-chips" id="debtStatusChips">
+          <button class="chip active" data-dstatus="belum">Belum lunas</button>
+          <button class="chip" data-dstatus="lunas">Lunas</button>
+          <button class="chip" data-dstatus="all">Semua</button>
+        </div>
+      </div>
+
+      <div class="debt-list" id="debtList"></div>
+    </section>
+
+  </main>
+
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-view="beranda">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
+      Beranda
+    </button>
+    <button class="nav-item" data-view="transaksi">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+      Transaksi
+    </button>
+    <button class="nav-item" data-view="statistik">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V10M12 19V5M20 19v-7"/></svg>
+      Statistik
+    </button>
+    <button class="nav-item" data-view="utang">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8c0-2.5-2-4-5-4S7 5.5 7 8s2 4 5 4 5 1.5 5 4-2 4-5 4-5-1.5-5-4"/><path d="M12 2v2M12 20v2"/></svg>
+      Utang
+    </button>
+  </nav>
+
+  <button class="fab" id="fabAdd" aria-label="Tambah transaksi">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+  </button>
+
+</div>
+
+<!-- ================= ADD/EDIT SHEET ================= -->
+<div class="overlay" id="formOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="formTitle">Tambah Transaksi</div>
+
+    <div class="type-toggle">
+      <button type="button" class="type-btn sel-in active" data-type="masuk">Uang Masuk</button>
+      <button type="button" class="type-btn sel-out" data-type="keluar">Uang Keluar</button>
+    </div>
+
+    <div class="field" id="fieldNominal">
+      <label for="inputNominal">Nominal</label>
+      <input type="text" inputmode="numeric" id="inputNominal" class="nominal-input" placeholder="Rp0">
+      <div class="field-error">Nominal harus lebih besar dari Rp0</div>
+    </div>
+
+    <div class="field" id="fieldKategori">
+      <label for="inputKategori">Kategori</label>
+      <select id="inputKategori"></select>
+      <div class="field-error">Pilih kategori</div>
+    </div>
+
+    <div class="field" id="fieldMakanUntuk">
+      <label for="inputMakanUntuk">Untuk</label>
+      <select id="inputMakanUntuk">
+        <option value="Iky">Iky</option>
+        <option value="Dhea">Dhea</option>
+        <option value="">Tidak diisi</option>
+      </select>
+    </div>
+
+    <div class="field" id="fieldSaldoAsal">
+      <label for="inputSaldoAsal">Ambil / Tambah dari <span style="color:var(--ink-faint); font-weight:400;">(khusus kategori Lainnya)</span></label>
+      <select id="inputSaldoAsal">
+        <option value="">— Tidak diisi —</option>
+        <option value="Iky">Uang Makan Iky</option>
+        <option value="Dhea">Uang Makan Dhea</option>
+        <option value="Tabungan">Uang Tabungan</option>
+      </select>
+      <div class="limit-note" id="saldoAsalNote" style="margin-top:6px;"></div>
+    </div>
+
+    <div class="field" id="fieldMetode">
+      <label>Cash atau Rekening</label>
+      <div class="type-toggle">
+        <button type="button" class="type-btn sel-neutral active" data-metode="cash">Cash</button>
+        <button type="button" class="type-btn sel-neutral" data-metode="rekening">Rekening</button>
+      </div>
+    </div>
+
+
+    <div class="field" id="fieldTanggal">
+      <label for="inputTanggal">Tanggal</label>
+      <input type="date" id="inputTanggal">
+      <div class="field-error">Tanggal tidak valid</div>
+    </div>
+
+    <div class="field">
+      <label for="inputCatatan">Catatan <span style="color:var(--ink-faint); font-weight:400;">(opsional)</span></label>
+      <textarea id="inputCatatan" placeholder="Contoh: Makan siang"></textarea>
+    </div>
+
+    <button class="save-btn" id="saveBtn">Simpan Transaksi</button>
+    <button class="cancel-link" id="cancelFormBtn">Batal</button>
+  </div>
+</div>
+
+<!-- ================= SHARE VIA WHATSAPP ================= -->
+<div class="overlay" id="shareOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Bagikan via WhatsApp</div>
+
+    <div class="field">
+      <label for="shareFromDate">Dari tanggal</label>
+      <input type="date" id="shareFromDate">
+    </div>
+    <div class="field">
+      <label for="shareToDate">Sampai tanggal</label>
+      <input type="date" id="shareToDate">
+      <div class="field-error" id="shareDateError">Tanggal "sampai" tidak boleh sebelum "dari"</div>
+    </div>
+
+    <button class="save-btn" id="shareConfirmBtn">Bagikan</button>
+    <button class="cancel-link" id="shareCancelBtn">Batal</button>
+  </div>
+</div>
+
+<!-- ================= ADD/EDIT UTANG-PIUTANG SHEET ================= -->
+<div class="overlay" id="debtFormOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="debtFormTitle">Tambah Utang / Piutang</div>
+
+    <div class="type-toggle">
+      <button type="button" class="type-btn sel-in active" data-dtype="piutang">Piutang <span style="font-weight:400;">(dia berutang ke saya)</span></button>
+      <button type="button" class="type-btn sel-out" data-dtype="utang">Utang <span style="font-weight:400;">(saya berutang)</span></button>
+    </div>
+    <div class="debt-note" id="debtTypeSaldoNote" style="margin:-6px 0 14px; padding:0 2px;"></div>
+
+    <div class="field" id="fieldDebtNama">
+      <label for="inputDebtNama">Nama Orang</label>
+      <input type="text" id="inputDebtNama" placeholder="Contoh: Budi">
+      <div class="field-error">Nama tidak boleh kosong</div>
+    </div>
+
+    <div class="field" id="fieldDebtNominal">
+      <label for="inputDebtNominal">Nominal</label>
+      <input type="text" inputmode="numeric" id="inputDebtNominal" class="nominal-input" placeholder="Rp0">
+      <div class="field-error">Nominal harus lebih besar dari Rp0</div>
+    </div>
+
+    <div class="field" id="fieldDebtMetode">
+      <label id="debtMetodeLabel">Cash atau Rekening</label>
+      <div class="type-toggle">
+        <button type="button" class="type-btn sel-neutral active" data-debtcreatemetode="cash">Cash</button>
+        <button type="button" class="type-btn sel-neutral" data-debtcreatemetode="rekening">Rekening</button>
+      </div>
+    </div>
+
+    <div class="field" id="fieldDebtTanggal">
+      <label for="inputDebtTanggal">Tanggal</label>
+      <input type="date" id="inputDebtTanggal">
+      <div class="field-error">Tanggal tidak valid</div>
+    </div>
+
+    <div class="field">
+      <label for="inputDebtJatuhTempo">Jatuh Tempo <span style="color:var(--ink-faint); font-weight:400;">(opsional)</span></label>
+      <input type="date" id="inputDebtJatuhTempo">
+    </div>
+
+    <div class="field">
+      <label for="inputDebtCatatan">Catatan <span style="color:var(--ink-faint); font-weight:400;">(opsional)</span></label>
+      <textarea id="inputDebtCatatan" placeholder="Contoh: Pinjam untuk beli buku"></textarea>
+    </div>
+
+    <button class="save-btn" id="saveDebtBtn">Simpan</button>
+    <button class="cancel-link" id="cancelDebtFormBtn">Batal</button>
+  </div>
+</div>
+
+<!-- ================= CATAT PEMBAYARAN UTANG/PIUTANG ================= -->
+<div class="overlay" id="debtPayOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Catat Pembayaran</div>
+    <div class="debt-note" id="debtPayInfo" style="margin-bottom:16px;"></div>
+
+    <div class="field" id="fieldDebtPay">
+      <label for="inputDebtPay">Nominal Dibayar</label>
+      <input type="text" inputmode="numeric" id="inputDebtPay" class="nominal-input" placeholder="Rp0">
+      <div class="field-error">Nominal tidak valid, cek sisa tagihan</div>
+    </div>
+
+    <div class="field" id="fieldDebtPayMetode">
+      <label>Cash atau Rekening</label>
+      <div class="type-toggle">
+        <button type="button" class="type-btn sel-neutral active" data-debtmetode="cash">Cash</button>
+        <button type="button" class="type-btn sel-neutral" data-debtmetode="rekening">Rekening</button>
+      </div>
+    </div>
+
+    <button class="save-btn" id="saveDebtPayBtn">Simpan Pembayaran</button>
+    <button class="cancel-link" id="cancelDebtPayBtn">Batal</button>
+  </div>
+</div>
+
+<!-- ================= CONFIRM DELETE ================= -->
+<div class="overlay center-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <div class="confirm-title" id="confirmTitle">Hapus transaksi ini?</div>
+    <div class="confirm-sub" id="confirmSub">Tindakan ini tidak bisa dibatalkan. Transaksi akan dihapus secara permanen.</div>
+    <div class="confirm-actions">
+      <button class="btn-ghost" id="cancelDeleteBtn">Batal</button>
+      <button class="btn-danger" id="confirmDeleteBtn">Hapus</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============================================================
+     STATE & PERSISTENCE
+  ============================================================ */
+  const STORAGE_KEY = 'catatan_transactions_v1';
+  const THEME_KEY = 'catatan_theme_v1';
+
+  /** @typedef {{id:string, type:'masuk'|'keluar', amount:number, category:string, date:string, note:string, createdAt:number}} Transaction */
+
+  /** @type {Transaction[]} */
+  let transactions = loadTransactions();
+
+  function loadTransactions(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    }catch(e){
+      console.error('Gagal memuat data transaksi', e);
+      return [];
+    }
+  }
+
+  function saveTransactions(){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+  }
+
+  function uid(){
+    return 'tx_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8);
+  }
+
+  /* ============================================================
+     UTANG & PIUTANG — STATE & PERSISTENCE
+  ============================================================ */
+  const DEBT_STORAGE_KEY = 'catatan_debts_v1';
+
+  /** @typedef {{id:string, type:'piutang'|'utang', person:string, amount:number, paid:number, date:string, dueDate:string, note:string, method:'cash'|'rekening', settled:boolean, createdAt:number}} DebtRecord */
+
+  /** @type {DebtRecord[]} */
+  let debts = loadDebts();
+
+  function loadDebts(){
+    try{
+      const raw = localStorage.getItem(DEBT_STORAGE_KEY);
+      if(!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    }catch(e){
+      console.error('Gagal memuat data utang/piutang', e);
+      return [];
+    }
+  }
+
+  function saveDebts(){
+    localStorage.setItem(DEBT_STORAGE_KEY, JSON.stringify(debts));
+  }
+
+  function uidDebt(){
+    return 'dbt_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8);
+  }
+
+  function debtRemaining(d){
+    return Math.max(0, Math.round(d.amount - d.paid));
+  }
+
+  /**
+   * Total pembayaran yang sudah tercatat pada sebuah utang/piutang, dipecah per metode
+   * (Cash / Rekening). Pembayaran lama (sebelum fitur ini ada) tidak punya data metode,
+   * jadi selisihnya dianggap Cash secara default agar totalnya tetap konsisten dengan d.paid.
+   */
+  function debtPaidByMethod(d){
+    const cash = d.paidCash || 0;
+    const rekening = d.paidRekening || 0;
+    const untracked = Math.max(0, Math.round(d.paid - cash - rekening));
+    return { cash: cash + untracked, rekening: rekening };
+  }
+
+  /**
+   * Efek Utang/Piutang terhadap Saldo utama.
+   * - Piutang (orang lain pinjam ke saya): Saldo (Cash/Rekening, sesuai yang dipilih
+   *   saat dicatat) langsung berkurang sebesar NOMINAL PENUH saat dicatat (uang keluar
+   *   dari kantong saya untuk dipinjamkan), dan berangsur "kembali" seiring pembayaran
+   *   diterima — real time mengikuti metode (Cash/Rekening) yang dipilih tiap pembayaran.
+   * - Utang (saya berutang / beli barang belum dibayar): dianggap sudah jadi pengeluaran
+   *   sejak awal, jadi Saldo (Cash/Rekening yang dipilih saat dicatat) langsung berkurang
+   *   sebesar nominal PENUH sejak dicatat, dan TETAP berkurang segitu terus (tidak nambah
+   *   lagi) walau sudah dibayar/lunas — karena pengeluarannya memang sudah terjadi dari
+   *   awal, cuma pembayarannya menyusul.
+   */
+  function getDebtSaldoEffect(){
+    const byMethod = getDebtSaldoEffectByMethod();
+    return byMethod.cash + byMethod.rekening;
+  }
+
+  /**
+   * Sama seperti getDebtSaldoEffect(), tapi dipecah per metode (Cash / Rekening) untuk
+   * breakdown Saldo di dashboard — dan untuk update Saldo secara real time begitu Utang
+   * atau Piutang dicatat/diedit/dihapus. Pengurangan awal (saat dicatat) mengikuti
+   * d.method (Cash/Rekening yang dipilih di form Tambah Utang/Piutang; data lama tanpa
+   * d.method dianggap Cash agar tetap konsisten). Pembayaran yang diterima/dibayar
+   * belakangan mengikuti metode yang dipilih saat "Catat Pembayaran".
+   */
+  function getDebtSaldoEffectByMethod(){
+    let cash = 0, rekening = 0;
+    debts.forEach(d=>{
+      const pm = debtPaidByMethod(d);
+      const baseMetode = d.method === 'rekening' ? 'rekening' : 'cash';
+      if(d.type === 'piutang'){
+        if(baseMetode === 'rekening') rekening += -d.amount; else cash += -d.amount;
+        cash += pm.cash;
+        rekening += pm.rekening;
+      }else if(d.type === 'utang'){
+        if(baseMetode === 'rekening') rekening += -d.amount; else cash += -d.amount;
+      }
+    });
+    return { cash, rekening };
+  }
+
+  /* ============================================================
+     CATEGORIES
+  ============================================================ */
+  const CATEGORIES = {
+    masuk: ['Gaji','Bonus','Penjualan','Transfer','Lainnya'],
+    keluar: ['Makanan','Minuman','Transportasi','Belanja','Tagihan','Kebutuhan Rumah','Hiburan','Lainnya']
+  };
+
+  /* ============================================================
+     DAILY SPENDING LIMIT — dibagi dua: Iky & Dhea
+  ============================================================ */
+  const DAILY_LIMIT = 100000; // total gabungan, dipertahankan untuk kompatibilitas lama
+  const FOOD_PERSONS = ['Iky','Dhea'];
+  const PERSON_DAILY_LIMIT = 50000;
+
+  function getTodaySpentFood(){
+    return transactions
+      .filter(t => t.type === 'keluar' && t.date === todayISO() && t.category === 'Makanan')
+      .reduce((s,t) => s + t.amount, 0);
+  }
+
+  function getTodaySpentByPerson(person){
+    const foodSpent = transactions
+      .filter(t => t.type === 'keluar' && t.date === todayISO() && t.category === 'Makanan' && t.person === person)
+      .reduce((s,t) => s + t.amount, 0);
+
+    // Transaksi kategori "Lainnya" yang ditandai mengambil/menambah dari Uang Makan
+    // seseorang juga ikut memengaruhi batas harian: keluar mengurangi sisa limit,
+    // masuk mengembalikan/menambah sisa limit.
+    const lainnyaAdjust = transactions
+      .filter(t => t.date === todayISO() && t.category === 'Lainnya' && t.lainnyaTarget === person)
+      .reduce((s,t) => s + (t.type === 'keluar' ? t.amount : -t.amount), 0);
+
+    return foodSpent + lainnyaAdjust;
+  }
+
+  /* ============================================================
+     UANG TABUNGAN (SAVINGS)
+     Akun terpisah dari saldo Cash/Rekening. Diisi/ditarik lewat
+     transaksi kategori "Lainnya" dengan Ambil/Tambah dari = "Tabungan":
+     - Uang Keluar → dana pindah ke Tabungan (saldo Tabungan bertambah)
+     - Uang Masuk  → dana ditarik dari Tabungan (saldo Tabungan berkurang)
+  ============================================================ */
+  function getSavingsBalance(){
+    return transactions
+      .filter(t => t.category === 'Lainnya' && t.lainnyaTarget === 'Tabungan')
+      .reduce((s,t) => s + (t.type === 'keluar' ? t.amount : -t.amount), 0);
+  }
+
+  function renderSavingsCard(){
+    const val = getSavingsBalance();
+    document.getElementById('savingsValue').textContent = (val<0?'-':'') + formatRupiah(val);
+  }
+
+  function getTodaySpentFoodUnknown(){
+    return transactions
+      .filter(t => t.type === 'keluar' && t.date === todayISO() && t.category === 'Makanan' && !t.person)
+      .reduce((s,t) => s + t.amount, 0);
+  }
+
+  function getTodaySpentOther(){
+    return transactions
+      .filter(t => t.type === 'keluar' && t.date === todayISO() && t.category !== 'Makanan')
+      .reduce((s,t) => s + t.amount, 0);
+  }
+
+  /* ============================================================
+     FORMATTING HELPERS
+  ============================================================ */
+  function formatRupiah(n){
+    const val = Math.round(Math.abs(n));
+    return 'Rp' + val.toLocaleString('id-ID');
+  }
+
+  function formatDateLabel(dateStr){
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('id-ID', { day:'numeric', month:'long', year:'numeric' });
+  }
+
+  function formatDateShort(dateStr){
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('id-ID', { day:'numeric', month:'short', year:'numeric' });
+  }
+
+  function todayISO(){
+    const d = new Date();
+    const off = d.getTimezoneOffset();
+    const local = new Date(d.getTime() - off*60000);
+    return local.toISOString().slice(0,10);
+  }
+
+  /* ============================================================
+     PERIOD HELPERS
+  ============================================================ */
+  function isInPeriod(dateStr, period){
+    if(period === 'all') return true;
+    const d = new Date(dateStr + 'T00:00:00');
+    const now = new Date();
+    const nowLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    if(period === 'today'){
+      return dateStr === todayISO();
+    }
+    if(period === 'week'){
+      // Monday - Sunday
+      const day = nowLocal.getDay(); // 0=Sun
+      const diffToMonday = (day === 0 ? 6 : day - 1);
+      const monday = new Date(nowLocal); monday.setDate(nowLocal.getDate() - diffToMonday);
+      const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
+      return d >= monday && d <= sunday;
+    }
+    if(period === 'month'){
+      return d.getFullYear() === nowLocal.getFullYear() && d.getMonth() === nowLocal.getMonth();
+    }
+    return true;
+  }
+
+  /* ============================================================
+     THEME
+  ============================================================ */
+  function initTheme(){
+    const saved = localStorage.getItem(THEME_KEY);
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const theme = saved || (prefersDark ? 'dark' : 'light');
+    applyTheme(theme);
+  }
+  function applyTheme(theme){
+    if(theme === 'dark'){
+      document.documentElement.setAttribute('data-theme','dark');
+      document.getElementById('themeIcon').innerHTML = '<path d="M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/><circle cx="12" cy="12" r="4"/>';
+    }else{
+      document.documentElement.removeAttribute('data-theme');
+      document.getElementById('themeIcon').innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+    }
+    localStorage.setItem(THEME_KEY, theme);
+  }
+  document.getElementById('themeToggle').addEventListener('click', function(){
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    applyTheme(isDark ? 'light' : 'dark');
+  });
+
+  /* ============================================================
+     NAVIGATION
+  ============================================================ */
+  const views = ['beranda','transaksi','statistik','utang'];
+  function showView(name){
+    views.forEach(v=>{
+      document.getElementById('view-'+v).classList.toggle('active', v===name);
+    });
+    document.querySelectorAll('.nav-item').forEach(btn=>{
+      btn.classList.toggle('active', btn.dataset.view === name);
+    });
+    if(name === 'transaksi') renderHistory();
+    if(name === 'statistik') renderStats();
+    if(name === 'beranda') renderDashboard();
+    if(name === 'utang') renderDebts();
+    window.scrollTo({top:0});
+  }
+  document.querySelectorAll('.nav-item').forEach(btn=>{
+    btn.addEventListener('click', ()=> showView(btn.dataset.view));
+  });
+  document.getElementById('goHistoryLink').addEventListener('click', ()=> showView('transaksi'));
+  document.getElementById('goDebtLink').addEventListener('click', ()=> showView('utang'));
+
+  /* ============================================================
+     DASHBOARD (BERANDA)
+  ============================================================ */
+  let dashboardPeriod = 'month';
+  document.getElementById('periodRow').addEventListener('click', function(e){
+    const btn = e.target.closest('.period-pill');
+    if(!btn) return;
+    dashboardPeriod = btn.dataset.period;
+    document.querySelectorAll('.period-pill').forEach(p=>p.classList.toggle('active', p===btn));
+    renderDashboard();
+  });
+
+  function renderDashboard(){
+    const filtered = transactions.filter(t => isInPeriod(t.date, dashboardPeriod));
+    const income = filtered.filter(t=>t.type==='masuk').reduce((s,t)=>s+t.amount,0);
+    const expense = filtered.filter(t=>t.type==='keluar').reduce((s,t)=>s+t.amount,0);
+
+    // Saldo = total keseluruhan (semua waktu), bukan hanya periode terpilih
+    // + disesuaikan dengan efek Utang/Piutang (lihat getDebtSaldoEffect)
+    const totalIncomeAll = transactions.filter(t=>t.type==='masuk').reduce((s,t)=>s+t.amount,0);
+    const totalExpenseAll = transactions.filter(t=>t.type==='keluar').reduce((s,t)=>s+t.amount,0);
+    const debtEffectByMethod = getDebtSaldoEffectByMethod();
+    const debtEffect = debtEffectByMethod.cash + debtEffectByMethod.rekening;
+    const saldo = totalIncomeAll - totalExpenseAll + debtEffect;
+
+    document.getElementById('balanceValue').textContent = (saldo<0?'-':'') + formatRupiah(saldo);
+    document.getElementById('incomeValue').textContent = formatRupiah(income);
+    document.getElementById('expenseValue').textContent = formatRupiah(expense);
+
+    // Breakdown Saldo per metode: Cash atau Rekening.
+    // Transaksi lama tanpa 'method' dianggap Cash. Efek Utang/Piutang dipecah
+    // per metode lewat getDebtSaldoEffectByMethod() (lihat komentar di fungsi itu).
+    const methodOf = t => t.method === 'rekening' ? 'rekening' : 'cash';
+    const cashIn = transactions.filter(t=>t.type==='masuk' && methodOf(t)==='cash').reduce((s,t)=>s+t.amount,0);
+    const cashOut = transactions.filter(t=>t.type==='keluar' && methodOf(t)==='cash').reduce((s,t)=>s+t.amount,0);
+    const rekIn = transactions.filter(t=>t.type==='masuk' && methodOf(t)==='rekening').reduce((s,t)=>s+t.amount,0);
+    const rekOut = transactions.filter(t=>t.type==='keluar' && methodOf(t)==='rekening').reduce((s,t)=>s+t.amount,0);
+    const saldoCash = cashIn - cashOut + debtEffectByMethod.cash;
+    const saldoRekening = rekIn - rekOut + debtEffectByMethod.rekening;
+    document.getElementById('balanceCashValue').textContent = (saldoCash<0?'-':'') + formatRupiah(saldoCash);
+    document.getElementById('balanceRekeningValue').textContent = (saldoRekening<0?'-':'') + formatRupiah(saldoRekening);
+
+    renderDailyLimit();
+    renderSavingsCard();
+    renderDebtSummaryDashboard();
+    renderMiniCategoryChart(filtered, dashboardPeriod);
+
+    const recent = [...transactions].sort((a,b)=>b.createdAt-a.createdAt).slice(0,5);
+    const list = document.getElementById('recentList');
+    if(recent.length === 0){
+      list.innerHTML = '';
+      list.appendChild(buildEmptyState());
+    }else{
+      list.innerHTML = '';
+      recent.forEach(t=> list.appendChild(buildTxItem(t)));
+    }
+  }
+
+  function renderDailyLimit(){
+    FOOD_PERSONS.forEach(person=>{
+      const spent = getTodaySpentByPerson(person);
+      const pct = Math.max(0, Math.min(100, Math.round((spent / PERSON_DAILY_LIMIT) * 100)));
+      const fill = document.getElementById('limitBarFill' + person);
+      const note = document.getElementById('limitNote' + person);
+
+      document.getElementById('limitSpent' + person).textContent = formatRupiah(spent);
+      document.getElementById('limitMax' + person).textContent = formatRupiah(PERSON_DAILY_LIMIT);
+      fill.style.width = pct + '%';
+
+      fill.classList.remove('warn','over');
+      if(spent > PERSON_DAILY_LIMIT){
+        fill.classList.add('over');
+        note.textContent = 'Melebihi batas harian sebesar ' + formatRupiah(spent - PERSON_DAILY_LIMIT);
+        note.classList.add('over');
+      }else if(spent >= PERSON_DAILY_LIMIT * 0.8){
+        fill.classList.add('warn');
+        note.textContent = 'Sisa batas hari ini: ' + formatRupiah(PERSON_DAILY_LIMIT - spent);
+        note.classList.remove('over');
+      }else{
+        note.textContent = 'Sisa batas hari ini: ' + formatRupiah(PERSON_DAILY_LIMIT - spent);
+        note.classList.remove('over');
+      }
+    });
+
+    const spentOther = getTodaySpentOther();
+    document.getElementById('otherSpent').textContent = formatRupiah(spentOther);
+
+    const unknown = getTodaySpentFoodUnknown();
+    const unknownNote = document.getElementById('limitNoteUnknown');
+    if(unknown > 0){
+      unknownNote.style.display = 'block';
+      unknownNote.textContent = 'Makan belum ditandai Iky/Dhea: ' + formatRupiah(unknown);
+    }else{
+      unknownNote.style.display = 'none';
+    }
+  }
+
+  function renderDebtSummaryDashboard(){
+    const totalPiutang = debts.filter(d=>d.type==='piutang' && !d.settled).reduce((s,d)=>s+debtRemaining(d),0);
+    const totalUtang = debts.filter(d=>d.type==='utang' && !d.settled).reduce((s,d)=>s+debtRemaining(d),0);
+    const receivableEl = document.getElementById('debtReceivableValue');
+    const payableEl = document.getElementById('debtPayableValue');
+    if(receivableEl) receivableEl.textContent = formatRupiah(totalPiutang);
+    if(payableEl) payableEl.textContent = formatRupiah(totalUtang);
+  }
+
+  const PERIOD_LABELS = { today:'Hari ini', week:'Minggu ini', month:'Bulan ini' };
+
+  function renderMiniCategoryChart(filtered, period){
+    const labelEl = document.getElementById('miniCatPeriodLabel');
+    if(labelEl) labelEl.textContent = PERIOD_LABELS[period] || 'Bulan ini';
+
+    const byCategory = {};
+    filtered.filter(t=>t.type==='keluar').forEach(t=>{
+      byCategory[t.category] = (byCategory[t.category]||0) + t.amount;
+    });
+    const entries = Object.entries(byCategory).sort((a,b)=>b[1]-a[1]);
+    const chartEl = document.getElementById('miniCatChart');
+    chartEl.innerHTML = '';
+
+    if(entries.length === 0){
+      chartEl.innerHTML = '<div class="barchart-empty">Belum ada pengeluaran pada periode ini.</div>';
+      return;
+    }
+
+    // Tampilkan maksimal 5 kategori teratas, sisanya digabung sebagai "Lainnya"
+    const top = entries.slice(0,5);
+    const rest = entries.slice(5);
+    if(rest.length > 0){
+      const restTotal = rest.reduce((s,[,amt])=>s+amt,0);
+      top.push(['Lainnya (gabungan)', restTotal]);
+    }
+    const max = Math.max(...top.map(([,amt])=>amt), 1);
+
+    top.forEach(([cat, amt])=>{
+      const color = colorForCategory(cat);
+      const pct = Math.round((amt/max)*100);
+      const row = document.createElement('div');
+      row.className = 'barchart-row';
+      row.innerHTML = `
+        <div class="barchart-label">${escapeHtml(cat)}</div>
+        <div class="barchart-track"><div class="barchart-fill" style="background:${color}"></div></div>
+        <div class="barchart-amt num">${formatRupiah(amt)}</div>
+      `;
+      chartEl.appendChild(row);
+      requestAnimationFrame(()=>{
+        row.querySelector('.barchart-fill').style.width = pct + '%';
+      });
+    });
+  }
+
+  /* ============================================================
+     BAGIKAN VIA WHATSAPP
+  ============================================================ */
+  function getPeriodDateRange(period){
+    const now = new Date();
+    const nowLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const toISO = (d)=>{
+      const off = d.getTimezoneOffset();
+      return new Date(d.getTime() - off*60000).toISOString().slice(0,10);
+    };
+    if(period === 'today'){
+      const t = todayISO();
+      return { from:t, to:t };
+    }
+    if(period === 'week'){
+      const day = nowLocal.getDay();
+      const diffToMonday = (day === 0 ? 6 : day - 1);
+      const monday = new Date(nowLocal); monday.setDate(nowLocal.getDate() - diffToMonday);
+      const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
+      return { from: toISO(monday), to: toISO(sunday) };
+    }
+    // month
+    const first = new Date(nowLocal.getFullYear(), nowLocal.getMonth(), 1);
+    const last = new Date(nowLocal.getFullYear(), nowLocal.getMonth()+1, 0);
+    return { from: toISO(first), to: toISO(last) };
+  }
+
+  function buildShareText(fromDate, toDate){
+    const filtered = transactions.filter(t => t.date >= fromDate && t.date <= toDate);
+
+    const income = filtered.filter(t=>t.type==='masuk').reduce((s,t)=>s+t.amount,0);
+    const expense = filtered.filter(t=>t.type==='keluar').reduce((s,t)=>s+t.amount,0);
+
+    const totalIncomeAll = transactions.filter(t=>t.type==='masuk').reduce((s,t)=>s+t.amount,0);
+    const totalExpenseAll = transactions.filter(t=>t.type==='keluar').reduce((s,t)=>s+t.amount,0);
+    const saldo = totalIncomeAll - totalExpenseAll + getDebtSaldoEffect();
+
+    const rangeLabel = fromDate === toDate
+      ? formatDateLabel(fromDate)
+      : `${formatDateLabel(fromDate)} – ${formatDateLabel(toDate)}`;
+
+    let text = `*Catatan Keuangan*\n${rangeLabel}\n\n`;
+    text += `Uang Masuk: ${formatRupiah(income)}\n`;
+    text += `Uang Keluar: ${formatRupiah(expense)}\n`;
+    text += `Saldo saat ini: ${(saldo<0?'-':'') + formatRupiah(saldo)}\n`;
+
+    if(filtered.length === 0){
+      text += `\nBelum ada transaksi pada rentang tanggal ini.`;
+      return text;
+    }
+
+    // Urutkan berdasarkan tanggal (dari lama ke baru), lalu kelompokkan per tanggal
+    const sorted = [...filtered].sort((a,b)=>{
+      if(a.date !== b.date) return a.date < b.date ? -1 : 1;
+      return a.createdAt - b.createdAt;
+    });
+
+    const byDate = new Map();
+    sorted.forEach(t=>{
+      if(!byDate.has(t.date)) byDate.set(t.date, []);
+      byDate.get(t.date).push(t);
+    });
+
+    text += `\nRincian:\n`;
+    byDate.forEach((items, date)=>{
+      text += `\n📅 ${formatDateLabel(date)}\n`;
+      items.forEach(t=>{
+        const sign = t.type === 'masuk' ? '+' : '-';
+        const noteText = t.note && t.note.trim() ? t.note.trim() : t.category;
+        text += `  • ${noteText} (${t.category}) — ${sign}${formatRupiah(t.amount)}\n`;
+      });
+    });
+
+    return text;
+  }
+
+  function buildEmptyState(){
+    const div = document.createElement('div');
+    div.className = 'empty-state';
+    div.innerHTML = `
+      <div class="em-title">Belum ada transaksi</div>
+      <div class="em-sub">Catat pemasukan atau pengeluaran pertama kamu.</div>
+      <button type="button">+ Tambah Transaksi</button>
+    `;
+    div.querySelector('button').addEventListener('click', ()=> openForm());
+    return div;
+  }
+
+  /* ============================================================
+     TRANSACTION ITEM RENDERING
+  ============================================================ */
+  function buildTxItem(t){
+    const el = document.createElement('div');
+    el.className = 'tx-item ' + t.type;
+    const sign = t.type === 'masuk' ? '+' : '−';
+    el.innerHTML = `
+      <div class="tx-info">
+        <div class="tx-note">${escapeHtml(t.note && t.note.trim() ? t.note.trim() : t.category)}</div>
+        <div class="tx-meta">${escapeHtml(t.category)}${t.person ? ' (' + escapeHtml(t.person) + ')' : ''} · ${formatDateShort(t.date)} · ${t.method === 'rekening' ? 'Rekening' : 'Cash'}${t.lainnyaTarget ? ' · ' + (t.lainnyaTarget === 'Tabungan' ? 'Uang Tabungan' : 'Uang Makan ' + escapeHtml(t.lainnyaTarget)) : ''}</div>
+      </div>
+      <div class="tx-amount ${t.type} num">${sign} ${formatRupiah(t.amount)}</div>
+      <div class="tx-actions">
+        <button class="icon-btn" data-action="edit" aria-label="Edit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        </button>
+        <button class="icon-btn" data-action="delete" aria-label="Hapus">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        </button>
+      </div>
+    `;
+    el.querySelector('[data-action="edit"]').addEventListener('click', ()=> openForm(t.id));
+    el.querySelector('[data-action="delete"]').addEventListener('click', ()=> openConfirmDelete(t.id));
+    return el;
+  }
+
+  function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  /* ============================================================
+     RIWAYAT (HISTORY) VIEW
+  ============================================================ */
+  let historyTypeFilter = 'all';
+  let historyPeriodFilter = 'all';
+  let historyDatePick = null;
+  let historySearch = '';
+
+  document.getElementById('typeChips').addEventListener('click', function(e){
+    const chip = e.target.closest('.chip'); if(!chip) return;
+    historyTypeFilter = chip.dataset.type;
+    [...this.children].forEach(c=>c.classList.toggle('active', c===chip));
+    renderHistory();
+  });
+
+  document.getElementById('periodChips').addEventListener('click', function(e){
+    const chip = e.target.closest('.chip'); if(!chip) return;
+    const p = chip.dataset.p;
+    [...this.children].forEach(c=>c.classList.toggle('active', c===chip));
+    const dateRow = document.getElementById('datePickRow');
+    if(p === 'pick'){
+      dateRow.style.display = 'flex';
+      historyPeriodFilter = 'pick';
+      if(!document.getElementById('datePick').value){
+        document.getElementById('datePick').value = todayISO();
+        historyDatePick = todayISO();
+      }
+    }else{
+      dateRow.style.display = 'none';
+      historyPeriodFilter = p;
+      historyDatePick = null;
+    }
+    renderHistory();
+  });
+
+  document.getElementById('datePick').addEventListener('change', function(){
+    historyDatePick = this.value;
+    renderHistory();
+  });
+  document.getElementById('clearDatePick').addEventListener('click', function(){
+    historyPeriodFilter = 'all';
+    historyDatePick = null;
+    document.getElementById('datePickRow').style.display = 'none';
+    document.querySelectorAll('#periodChips .chip').forEach(c=>c.classList.toggle('active', c.dataset.p==='all'));
+    renderHistory();
+  });
+
+  let searchDebounce;
+  document.getElementById('searchInput').addEventListener('input', function(){
+    clearTimeout(searchDebounce);
+    const val = this.value;
+    searchDebounce = setTimeout(()=>{
+      historySearch = val.trim().toLowerCase();
+      renderHistory();
+    }, 150);
+  });
+
+  function renderHistory(){
+    let list = [...transactions];
+
+    if(historyTypeFilter !== 'all'){
+      list = list.filter(t=>t.type === historyTypeFilter);
+    }
+
+    if(historyPeriodFilter === 'pick' && historyDatePick){
+      list = list.filter(t=>t.date === historyDatePick);
+    }else if(historyPeriodFilter !== 'all' && historyPeriodFilter !== 'pick'){
+      list = list.filter(t=>isInPeriod(t.date, historyPeriodFilter));
+    }
+
+    if(historySearch){
+      list = list.filter(t=>
+        (t.note||'').toLowerCase().includes(historySearch) ||
+        (t.category||'').toLowerCase().includes(historySearch)
+      );
+    }
+
+    list.sort((a,b)=>b.createdAt-a.createdAt);
+
+    const container = document.getElementById('historyList');
+    container.innerHTML = '';
+    if(list.length === 0){
+      const div = document.createElement('div');
+      div.className = 'empty-state';
+      const hasAnyData = transactions.length > 0;
+      div.innerHTML = hasAnyData
+        ? `<div class="em-title">Tidak ada transaksi ditemukan</div><div class="em-sub">Coba ubah filter atau kata pencarian.</div>`
+        : `<div class="em-title">Belum ada transaksi</div><div class="em-sub">Catat pemasukan atau pengeluaran pertama kamu.</div>`;
+      if(!hasAnyData){
+        const btn = document.createElement('button');
+        btn.textContent = '+ Tambah Transaksi';
+        btn.addEventListener('click', ()=> openForm());
+        div.appendChild(btn);
+      }
+      container.appendChild(div);
+      return;
+    }
+    // Kelompokkan transaksi berdasarkan kategori agar tidak tercampur
+    const groups = new Map(); // key -> { label, type, items, total }
+    list.forEach(t=>{
+      const ambiguous = historyTypeFilter === 'all';
+      const key = ambiguous ? (t.type + '|' + t.category) : t.category;
+      const label = ambiguous ? (t.category + ' · ' + (t.type === 'masuk' ? 'Masuk' : 'Keluar')) : t.category;
+      if(!groups.has(key)){
+        groups.set(key, { label, type: t.type, items: [], total: 0 });
+      }
+      const g = groups.get(key);
+      g.items.push(t);
+      g.total += t.amount;
+    });
+
+    const orderedGroups = [...groups.values()].sort((a,b)=> b.total - a.total);
+
+    orderedGroups.forEach(group=>{
+      const block = document.createElement('div');
+      block.className = 'group-block';
+
+      const head = document.createElement('div');
+      head.className = 'group-head';
+      const sign = group.type === 'masuk' ? '+' : '−';
+      head.innerHTML = `
+        <span class="group-name">${escapeHtml(group.label)}</span>
+        <span class="group-total ${group.type} num">${sign} ${formatRupiah(group.total)}</span>
+      `;
+      block.appendChild(head);
+
+      const groupList = document.createElement('div');
+      groupList.className = 'tx-list';
+      group.items.forEach(t=> groupList.appendChild(buildTxItem(t)));
+      block.appendChild(groupList);
+
+      container.appendChild(block);
+    });
+  }
+
+  /* ============================================================
+     STATISTIK VIEW
+  ============================================================ */
+  // Palet warna kategori — nada earthy, senada dengan aksen teal & rust utama
+  const CATEGORY_COLORS = {
+    'Makanan':'#A24E38',
+    'Minuman':'#2E7D8C',
+    'Transportasi':'#3E5C55',
+    'Belanja':'#8A6D3B',
+    'Tagihan':'#5B6B8C',
+    'Kebutuhan Rumah':'#7A6C8F',
+    'Hiburan':'#4C7A6E',
+    'Lainnya':'#8C8577'
+  };
+  function colorForCategory(cat){
+    return CATEGORY_COLORS[cat] || '#8C8577';
+  }
+
+  function renderStats(){
+    const monthTx = transactions.filter(t=>isInPeriod(t.date,'month'));
+    const income = monthTx.filter(t=>t.type==='masuk').reduce((s,t)=>s+t.amount,0);
+    const expense = monthTx.filter(t=>t.type==='keluar').reduce((s,t)=>s+t.amount,0);
+
+    document.getElementById('statIncome').textContent = formatRupiah(income);
+    document.getElementById('statExpense').textContent = formatRupiah(expense);
+
+    const maxCompare = Math.max(income, expense, 1);
+    const incomeBar = document.getElementById('statIncomeBar');
+    const expenseBar = document.getElementById('statExpenseBar');
+    requestAnimationFrame(()=>{
+      incomeBar.style.width = Math.round((income/maxCompare)*100) + '%';
+      expenseBar.style.width = Math.round((expense/maxCompare)*100) + '%';
+    });
+
+    const byCategory = {};
+    monthTx.filter(t=>t.type==='keluar').forEach(t=>{
+      byCategory[t.category] = (byCategory[t.category]||0) + t.amount;
+    });
+    const entries = Object.entries(byCategory).sort((a,b)=>b[1]-a[1]);
+
+    document.getElementById('donutTotal').textContent = formatRupiah(expense);
+
+    const legendEl = document.getElementById('legendList');
+    const svg = document.getElementById('donutChart');
+
+    if(entries.length === 0){
+      svg.innerHTML = `<circle cx="90" cy="90" r="70" fill="none" stroke="var(--border)" stroke-width="22"/>`;
+      legendEl.innerHTML = `<div style="font-size:13px; color:var(--ink-faint); text-align:center; padding:8px 0;">Belum ada pengeluaran bulan ini.</div>`;
+      document.getElementById('categoryBarChart').innerHTML = '<div class="barchart-empty">Belum ada pengeluaran bulan ini.</div>';
+      renderTrendChart();
+      return;
+    }
+
+    renderDonut(entries, expense);
+    renderCategoryBarChart(entries);
+    renderTrendChart();
+
+    legendEl.innerHTML = '';
+    entries.forEach(([cat, amt])=>{
+      const pct = expense > 0 ? Math.round((amt/expense)*100) : 0;
+      const color = colorForCategory(cat);
+      const row = document.createElement('div');
+      row.className = 'legend-row';
+      row.innerHTML = `
+        <div class="legend-dot" style="background:${color}"></div>
+        <div class="legend-info">
+          <div class="legend-top">
+            <span class="legend-cat">${escapeHtml(cat)}</span>
+            <span>
+              <span class="legend-amt num">${formatRupiah(amt)}</span>
+              <span class="legend-pct">${pct}%</span>
+            </span>
+          </div>
+          <div class="legend-track"><div class="legend-fill" style="background:${color}"></div></div>
+        </div>
+      `;
+      legendEl.appendChild(row);
+      requestAnimationFrame(()=>{
+        row.querySelector('.legend-fill').style.width = pct + '%';
+      });
+    });
+  }
+
+  function renderDonut(entries, total){
+    const svg = document.getElementById('donutChart');
+    svg.innerHTML = '';
+    const cx = 90, cy = 90, r = 70, sw = 22;
+    const circumference = 2 * Math.PI * r;
+
+    const track = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    track.setAttribute('cx',cx); track.setAttribute('cy',cy); track.setAttribute('r',r);
+    track.setAttribute('fill','none');
+    track.setAttribute('stroke','var(--border)');
+    track.setAttribute('stroke-width',sw);
+    svg.appendChild(track);
+
+    let cumulative = 0;
+    entries.forEach(([cat, amt], idx)=>{
+      const pct = total > 0 ? amt/total : 0;
+      const segLen = pct * circumference;
+      const color = colorForCategory(cat);
+
+      const circle = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      circle.setAttribute('cx',cx); circle.setAttribute('cy',cy); circle.setAttribute('r',r);
+      circle.setAttribute('fill','none');
+      circle.setAttribute('stroke', color);
+      circle.setAttribute('stroke-width', sw);
+      circle.setAttribute('stroke-dasharray', `0 ${circumference}`);
+      circle.setAttribute('stroke-dashoffset', String(-cumulative));
+      circle.setAttribute('transform', `rotate(-90 ${cx} ${cy})`);
+      circle.style.transition = `stroke-dasharray .85s cubic-bezier(.2,.8,.2,1) ${idx * 0.07}s`;
+      svg.appendChild(circle);
+
+      requestAnimationFrame(()=>{
+        requestAnimationFrame(()=>{
+          circle.setAttribute('stroke-dasharray', `${segLen} ${circumference - segLen}`);
+        });
+      });
+
+      cumulative += segLen;
+    });
+  }
+
+  function renderCategoryBarChart(entries){
+    const chartEl = document.getElementById('categoryBarChart');
+    chartEl.innerHTML = '';
+    const max = Math.max(...entries.map(([,amt])=>amt), 1);
+
+    entries.forEach(([cat, amt])=>{
+      const color = colorForCategory(cat);
+      const pct = Math.round((amt/max)*100);
+      const row = document.createElement('div');
+      row.className = 'barchart-row';
+      row.innerHTML = `
+        <div class="barchart-label">${escapeHtml(cat)}</div>
+        <div class="barchart-track"><div class="barchart-fill" style="background:${color}"></div></div>
+        <div class="barchart-amt num">${formatRupiah(amt)}</div>
+      `;
+      chartEl.appendChild(row);
+      requestAnimationFrame(()=>{
+        row.querySelector('.barchart-fill').style.width = pct + '%';
+      });
+    });
+  }
+
+  const MONTH_SHORT = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+
+  function getLastMonths(count){
+    const now = new Date();
+    const months = [];
+    for(let i = count - 1; i >= 0; i--){
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push({ year: d.getFullYear(), month: d.getMonth(), label: MONTH_SHORT[d.getMonth()] });
+    }
+    return months;
+  }
+
+  function renderTrendChart(){
+    const svg = document.getElementById('trendChart');
+    const legendEl = document.getElementById('trendLegend');
+    svg.innerHTML = '';
+    legendEl.innerHTML = '';
+
+    const months = getLastMonths(6);
+
+    // Tentukan kategori teratas (berdasarkan total 6 bulan terakhir) untuk dijadikan garis terpisah
+    const totalsByCategory = {};
+    const monthTotals = months.map(()=>0);
+    transactions.filter(t=>t.type==='keluar').forEach(t=>{
+      const d = new Date(t.date + 'T00:00:00');
+      const idx = months.findIndex(m=>m.year===d.getFullYear() && m.month===d.getMonth());
+      if(idx === -1) return;
+      totalsByCategory[t.category] = (totalsByCategory[t.category]||0) + t.amount;
+      monthTotals[idx] += t.amount;
+    });
+
+    const topCategories = Object.entries(totalsByCategory).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([cat])=>cat);
+
+    if(topCategories.length === 0){
+      svg.innerHTML = `<text x="160" y="75" text-anchor="middle" class="linechart-axis-label" style="font-size:12px;">Belum ada data pengeluaran</text>`;
+      return;
+    }
+
+    const series = topCategories.map(cat=>{
+      const values = months.map(m=>{
+        return transactions
+          .filter(t=>t.type==='keluar' && t.category===cat)
+          .filter(t=>{ const d=new Date(t.date+'T00:00:00'); return d.getFullYear()===m.year && d.getMonth()===m.month; })
+          .reduce((s,t)=>s+t.amount,0);
+      });
+      return { cat, values, color: colorForCategory(cat) };
+    });
+
+    const W = 320, H = 150, padL = 8, padR = 8, padT = 10, padB = 24;
+    const plotW = W - padL - padR, plotH = H - padT - padB;
+    const maxVal = Math.max(...series.flatMap(s=>s.values), 1);
+    const stepX = months.length > 1 ? plotW / (months.length - 1) : 0;
+
+    const xFor = (i)=> padL + stepX * i;
+    const yFor = (v)=> padT + plotH - (v/maxVal)*plotH;
+
+    // Garis bantu horizontal
+    for(let g=0; g<=2; g++){
+      const y = padT + plotH * (g/2);
+      const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('x1', padL); line.setAttribute('x2', W - padR);
+      line.setAttribute('y1', y); line.setAttribute('y2', y);
+      line.setAttribute('stroke', 'var(--border)');
+      line.setAttribute('stroke-width', '1');
+      svg.appendChild(line);
+    }
+
+    // Label bulan di sumbu X
+    months.forEach((m,i)=>{
+      const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+      t.setAttribute('x', xFor(i));
+      t.setAttribute('y', H - 6);
+      t.setAttribute('text-anchor', i===0 ? 'start' : (i===months.length-1 ? 'end' : 'middle'));
+      t.setAttribute('class', 'linechart-axis-label');
+      t.textContent = m.label;
+      svg.appendChild(t);
+    });
+
+    series.forEach(s=>{
+      const points = s.values.map((v,i)=> `${xFor(i)},${yFor(v)}`).join(' ');
+      const polyline = document.createElementNS('http://www.w3.org/2000/svg','polyline');
+      polyline.setAttribute('points', points);
+      polyline.setAttribute('fill', 'none');
+      polyline.setAttribute('stroke', s.color);
+      polyline.setAttribute('stroke-width', '2.5');
+      polyline.setAttribute('stroke-linejoin', 'round');
+      polyline.setAttribute('stroke-linecap', 'round');
+      svg.appendChild(polyline);
+
+      s.values.forEach((v,i)=>{
+        const dot = document.createElementNS('http://www.w3.org/2000/svg','circle');
+        dot.setAttribute('cx', xFor(i));
+        dot.setAttribute('cy', yFor(v));
+        dot.setAttribute('r', '3');
+        dot.setAttribute('fill', s.color);
+        dot.setAttribute('class', 'linechart-point');
+        svg.appendChild(dot);
+      });
+
+      const legendItem = document.createElement('div');
+      legendItem.className = 'linechart-legend-item';
+      legendItem.innerHTML = `<span class="linechart-legend-dot" style="background:${s.color}"></span>${escapeHtml(s.cat)}`;
+      legendEl.appendChild(legendItem);
+    });
+  }
+
+  /* ============================================================
+     UTANG & PIUTANG — LIST VIEW
+  ============================================================ */
+  let debtTypeFilter = 'all';
+  let debtStatusFilter = 'belum';
+
+  document.getElementById('debtTypeChips').addEventListener('click', function(e){
+    const chip = e.target.closest('.chip'); if(!chip) return;
+    debtTypeFilter = chip.dataset.dtype;
+    [...this.children].forEach(c=>c.classList.toggle('active', c===chip));
+    renderDebts();
+  });
+  document.getElementById('debtStatusChips').addEventListener('click', function(e){
+    const chip = e.target.closest('.chip'); if(!chip) return;
+    debtStatusFilter = chip.dataset.dstatus;
+    [...this.children].forEach(c=>c.classList.toggle('active', c===chip));
+    renderDebts();
+  });
+
+  function renderDebts(){
+    const totalPiutang = debts.filter(d=>d.type==='piutang' && !d.settled).reduce((s,d)=>s+debtRemaining(d),0);
+    const totalUtang = debts.filter(d=>d.type==='utang' && !d.settled).reduce((s,d)=>s+debtRemaining(d),0);
+    const net = totalPiutang - totalUtang;
+    document.getElementById('debtReceivableTotal').textContent = formatRupiah(totalPiutang);
+    document.getElementById('debtPayableTotal').textContent = formatRupiah(totalUtang);
+    document.getElementById('debtNetValue').textContent = (net<0?'-':'') + formatRupiah(net);
+
+    let list = [...debts];
+    if(debtTypeFilter !== 'all') list = list.filter(d=>d.type===debtTypeFilter);
+    if(debtStatusFilter === 'belum') list = list.filter(d=>!d.settled);
+    else if(debtStatusFilter === 'lunas') list = list.filter(d=>d.settled);
+
+    list.sort((a,b)=>b.createdAt-a.createdAt);
+
+    const container = document.getElementById('debtList');
+    container.innerHTML = '';
+
+    if(list.length === 0){
+      const div = document.createElement('div');
+      div.className = 'empty-state';
+      const hasAnyData = debts.length > 0;
+      div.innerHTML = hasAnyData
+        ? `<div class="em-title">Tidak ada data ditemukan</div><div class="em-sub">Coba ubah filter di atas.</div>`
+        : `<div class="em-title">Belum ada utang/piutang</div><div class="em-sub">Catat siapa yang berutang ke kamu, atau utang kamu ke orang lain.</div>`;
+      if(!hasAnyData){
+        const btn = document.createElement('button');
+        btn.textContent = '+ Tambah Utang / Piutang';
+        btn.addEventListener('click', ()=> openDebtForm());
+        div.appendChild(btn);
+      }
+      container.appendChild(div);
+      return;
+    }
+
+    list.forEach(d=> container.appendChild(buildDebtItem(d)));
+  }
+
+  function buildDebtItem(d){
+    const el = document.createElement('div');
+    el.className = 'debt-item ' + d.type;
+    const remaining = debtRemaining(d);
+    const sign = d.type === 'piutang' ? '+' : '−';
+    const pct = d.amount > 0 ? Math.min(100, Math.round((d.paid/d.amount)*100)) : 0;
+    const dueText = d.dueDate ? ' · Jatuh tempo ' + formatDateShort(d.dueDate) : '';
+    const progressHtml = (d.paid > 0 && !d.settled)
+      ? `<div class="debt-progress-track"><div class="debt-progress-fill ${d.type}" style="width:${pct}%"></div></div>`
+      : '';
+    const noteHtml = d.note && d.note.trim() ? `<div class="debt-note">${escapeHtml(d.note.trim())}</div>` : '';
+    const topActionsHtml = d.settled
+      ? `<button type="button" data-action="unsettle">Batalkan Lunas</button>`
+      : `<button type="button" data-action="pay">Catat Bayar</button><button type="button" data-action="settle" class="primary">Tandai Lunas</button>`;
+
+    el.innerHTML = `
+      <div class="debt-top">
+        <div class="debt-name-wrap">
+          <div class="debt-name">${escapeHtml(d.person)}</div>
+          <div class="debt-sub">
+            <span class="badge ${d.settled ? 'lunas' : 'belum'}">${d.settled ? 'Lunas' : 'Belum lunas'}</span>
+            <span>${d.type === 'piutang' ? 'Piutang' : 'Utang'} · ${formatDateShort(d.date)} · ${d.method === 'rekening' ? 'Rekening' : 'Cash'}${dueText}</span>
+          </div>
+        </div>
+        <div class="debt-amount-wrap">
+          <div class="debt-amount ${d.type} num">${sign} ${formatRupiah(remaining)}</div>
+          ${d.paid > 0 ? `<div class="debt-amount-total num">dari ${formatRupiah(d.amount)}</div>` : ''}
+        </div>
+      </div>
+      ${progressHtml}
+      ${noteHtml}
+      <div class="debt-actions">${topActionsHtml}</div>
+      <div class="debt-actions">
+        <button type="button" data-action="edit">Edit</button>
+        <button type="button" data-action="delete" class="danger">Hapus</button>
+      </div>
+    `;
+
+    const payBtn = el.querySelector('[data-action="pay"]');
+    if(payBtn) payBtn.addEventListener('click', ()=> openDebtPayForm(d.id));
+    const settleBtn = el.querySelector('[data-action="settle"]');
+    if(settleBtn) settleBtn.addEventListener('click', ()=> markDebtSettled(d.id, true));
+    const unsettleBtn = el.querySelector('[data-action="unsettle"]');
+    if(unsettleBtn) unsettleBtn.addEventListener('click', ()=> markDebtSettled(d.id, false));
+    el.querySelector('[data-action="edit"]').addEventListener('click', ()=> openDebtForm(d.id));
+    el.querySelector('[data-action="delete"]').addEventListener('click', ()=> openConfirmDelete(d.id, 'debt'));
+    return el;
+  }
+
+  function markDebtSettled(id, settled){
+    const d = debts.find(x=>x.id===id);
+    if(!d) return;
+    d.settled = settled;
+    if(settled) d.paid = d.amount;
+    saveDebts();
+    renderDebts();
+    renderDashboard();
+    showToast(settled ? 'Ditandai lunas' : 'Ditandai belum lunas');
+  }
+
+  /* ============================================================
+     UTANG & PIUTANG — ADD / EDIT FORM
+  ============================================================ */
+  const debtFormOverlay = document.getElementById('debtFormOverlay');
+  const inputDebtNama = document.getElementById('inputDebtNama');
+  const inputDebtNominal = document.getElementById('inputDebtNominal');
+  const inputDebtTanggal = document.getElementById('inputDebtTanggal');
+  const inputDebtJatuhTempo = document.getElementById('inputDebtJatuhTempo');
+  const inputDebtCatatan = document.getElementById('inputDebtCatatan');
+  let currentDebtType = 'piutang';
+  let editingDebtId = null;
+
+  function updateDebtTypeSaldoNote(){
+    const el = document.getElementById('debtTypeSaldoNote');
+    const labelEl = document.getElementById('debtMetodeLabel');
+    if(el){
+      el.textContent = currentDebtType === 'piutang'
+        ? 'Saldo Cash/Rekening yang dipilih di bawah akan langsung berkurang saat disimpan, lalu bertambah lagi seiring pembayaran diterima.'
+        : 'Saldo Cash/Rekening yang dipilih di bawah akan langsung berkurang saat disimpan (dihitung sebagai pengeluaran), dan tidak berubah lagi saat sudah dibayar/lunas.';
+    }
+    if(labelEl){
+      labelEl.textContent = currentDebtType === 'piutang' ? 'Uangnya diambil dari mana?' : 'Tercatat mengurangi saldo yang mana?';
+    }
+  }
+
+  document.querySelectorAll('#debtFormOverlay [data-dtype]').forEach(btn=>{
+    btn.addEventListener('click', function(){
+      currentDebtType = this.dataset.dtype;
+      document.querySelectorAll('#debtFormOverlay [data-dtype]').forEach(b=>b.classList.toggle('active', b===this));
+      updateDebtTypeSaldoNote();
+    });
+  });
+
+  let currentDebtCreateMetode = 'cash';
+  document.querySelectorAll('#debtFormOverlay [data-debtcreatemetode]').forEach(btn=>{
+    btn.addEventListener('click', function(){
+      currentDebtCreateMetode = this.dataset.debtcreatemetode;
+      document.querySelectorAll('#debtFormOverlay [data-debtcreatemetode]').forEach(b=>b.classList.toggle('active', b===this));
+    });
+  });
+
+  inputDebtNominal.addEventListener('input', function(){
+    const cursorFromEnd = this.value.length - this.selectionStart;
+    this.value = this.value ? 'Rp' + formatNominalInput(this.value) : '';
+    const pos = Math.max(2, this.value.length - cursorFromEnd);
+    this.setSelectionRange(pos,pos);
+  });
+
+  function getDebtNominalValue(){
+    const digits = inputDebtNominal.value.replace(/[^0-9]/g,'');
+    return digits ? Number(digits) : 0;
+  }
+
+  function openDebtForm(id){
+    editingDebtId = id || null;
+    document.querySelectorAll('#debtFormOverlay .field').forEach(f=>f.classList.remove('has-error'));
+
+    if(editingDebtId){
+      const d = debts.find(x=>x.id===editingDebtId);
+      document.getElementById('debtFormTitle').textContent = 'Edit Utang / Piutang';
+      currentDebtType = d.type;
+      document.querySelectorAll('#debtFormOverlay [data-dtype]').forEach(b=>b.classList.toggle('active', b.dataset.dtype===d.type));
+      inputDebtNama.value = d.person;
+      inputDebtNominal.value = 'Rp' + d.amount.toLocaleString('id-ID');
+      inputDebtTanggal.value = d.date;
+      inputDebtJatuhTempo.value = d.dueDate || '';
+      inputDebtCatatan.value = d.note || '';
+      currentDebtCreateMetode = d.method || 'cash';
+      document.querySelectorAll('#debtFormOverlay [data-debtcreatemetode]').forEach(b=>b.classList.toggle('active', b.dataset.debtcreatemetode===currentDebtCreateMetode));
+    }else{
+      document.getElementById('debtFormTitle').textContent = 'Tambah Utang / Piutang';
+      currentDebtType = 'piutang';
+      document.querySelectorAll('#debtFormOverlay [data-dtype]').forEach(b=>b.classList.toggle('active', b.dataset.dtype==='piutang'));
+      inputDebtNama.value = '';
+      inputDebtNominal.value = '';
+      inputDebtTanggal.value = todayISO();
+      inputDebtJatuhTempo.value = '';
+      inputDebtCatatan.value = '';
+      currentDebtCreateMetode = 'cash';
+      document.querySelectorAll('#debtFormOverlay [data-debtcreatemetode]').forEach(b=>b.classList.toggle('active', b.dataset.debtcreatemetode==='cash'));
+    }
+    updateDebtTypeSaldoNote();
+    debtFormOverlay.classList.add('open');
+    setTimeout(()=> inputDebtNama.focus(), 200);
+  }
+
+  function closeDebtForm(){
+    debtFormOverlay.classList.remove('open');
+    editingDebtId = null;
+  }
+
+  document.getElementById('addDebtBtn').addEventListener('click', ()=> openDebtForm());
+  document.getElementById('cancelDebtFormBtn').addEventListener('click', closeDebtForm);
+  debtFormOverlay.addEventListener('click', function(e){ if(e.target === debtFormOverlay) closeDebtForm(); });
+
+  document.getElementById('saveDebtBtn').addEventListener('click', function(){
+    document.querySelectorAll('#debtFormOverlay .field').forEach(f=>f.classList.remove('has-error'));
+    let valid = true;
+
+    const nama = inputDebtNama.value.trim();
+    if(!nama){
+      document.getElementById('fieldDebtNama').classList.add('has-error');
+      valid = false;
+    }
+    const amount = getDebtNominalValue();
+    if(!amount || amount <= 0){
+      document.getElementById('fieldDebtNominal').classList.add('has-error');
+      valid = false;
+    }
+    if(!inputDebtTanggal.value){
+      document.getElementById('fieldDebtTanggal').classList.add('has-error');
+      valid = false;
+    }
+    if(!valid) return;
+
+    const wasEditing = !!editingDebtId;
+
+    if(editingDebtId){
+      const d = debts.find(x=>x.id===editingDebtId);
+      d.type = currentDebtType;
+      d.person = nama;
+      d.amount = amount;
+      // Catatan: jangan "memotong" d.paid saat nominal diperkecil — cukup biarkan
+      // debtRemaining() yang membatasi sisa ke 0 (lihat Math.max(0, ...)). Kalau
+      // d.paid ikut dipotong di sini, riwayat pembayaran hilang permanen, sehingga
+      // saat nominal dikembalikan ke angka semula, saldo tidak balik ke nilai awal
+      // (selalu berkurang, tidak pernah bertambah kembali). Itu sebabnya baris
+      // klem lama dihapus.
+      d.date = inputDebtTanggal.value;
+      d.dueDate = inputDebtJatuhTempo.value || '';
+      d.note = inputDebtCatatan.value.trim();
+      d.method = currentDebtCreateMetode;
+      d.settled = debtRemaining(d) <= 0;
+      saveDebts();
+    }else{
+      const d = {
+        id: uidDebt(),
+        type: currentDebtType,
+        person: nama,
+        amount: amount,
+        paid: 0,
+        date: inputDebtTanggal.value,
+        dueDate: inputDebtJatuhTempo.value || '',
+        note: inputDebtCatatan.value.trim(),
+        method: currentDebtCreateMetode,
+        settled: false,
+        createdAt: Date.now()
+      };
+      debts.push(d);
+      saveDebts();
+    }
+
+    closeDebtForm();
+    renderDebts();
+    renderDashboard();
+    showToast(wasEditing ? 'Data diperbarui' : 'Utang/piutang berhasil ditambahkan');
+  });
+
+  /* ============================================================
+     UTANG & PIUTANG — CATAT PEMBAYARAN
+  ============================================================ */
+  const debtPayOverlay = document.getElementById('debtPayOverlay');
+  const inputDebtPay = document.getElementById('inputDebtPay');
+  let payingDebtId = null;
+  let currentDebtPayMetode = 'cash';
+
+  document.querySelectorAll('#debtPayOverlay [data-debtmetode]').forEach(btn=>{
+    btn.addEventListener('click', function(){
+      currentDebtPayMetode = this.dataset.debtmetode;
+      document.querySelectorAll('#debtPayOverlay [data-debtmetode]').forEach(b=>b.classList.toggle('active', b===this));
+    });
+  });
+
+  inputDebtPay.addEventListener('input', function(){
+    const cursorFromEnd = this.value.length - this.selectionStart;
+    this.value = this.value ? 'Rp' + formatNominalInput(this.value) : '';
+    const pos = Math.max(2, this.value.length - cursorFromEnd);
+    this.setSelectionRange(pos,pos);
+  });
+
+  function openDebtPayForm(id){
+    payingDebtId = id;
+    const d = debts.find(x=>x.id===id);
+    if(!d) return;
+    document.getElementById('fieldDebtPay').classList.remove('has-error');
+    const remaining = debtRemaining(d);
+    const label = d.type === 'piutang' ? 'yang akan diterima dari' : 'yang harus dibayar ke';
+    document.getElementById('debtPayInfo').textContent = `Sisa ${label} ${d.person}: ${formatRupiah(remaining)}`;
+    inputDebtPay.value = '';
+    currentDebtPayMetode = 'cash';
+    document.querySelectorAll('#debtPayOverlay [data-debtmetode]').forEach(b=>b.classList.toggle('active', b.dataset.debtmetode==='cash'));
+    debtPayOverlay.classList.add('open');
+    setTimeout(()=> inputDebtPay.focus(), 200);
+  }
+
+  function closeDebtPayForm(){
+    debtPayOverlay.classList.remove('open');
+    payingDebtId = null;
+  }
+  document.getElementById('cancelDebtPayBtn').addEventListener('click', closeDebtPayForm);
+  debtPayOverlay.addEventListener('click', function(e){ if(e.target === debtPayOverlay) closeDebtPayForm(); });
+
+  document.getElementById('saveDebtPayBtn').addEventListener('click', function(){
+    document.getElementById('fieldDebtPay').classList.remove('has-error');
+    const digits = inputDebtPay.value.replace(/[^0-9]/g,'');
+    const amount = digits ? Number(digits) : 0;
+    const d = debts.find(x=>x.id===payingDebtId);
+    if(!d){ closeDebtPayForm(); return; }
+    const remaining = debtRemaining(d);
+    if(!amount || amount <= 0 || amount > remaining){
+      document.getElementById('fieldDebtPay').classList.add('has-error');
+      return;
+    }
+    d.paid += amount;
+    if(currentDebtPayMetode === 'rekening'){
+      d.paidRekening = (d.paidRekening || 0) + amount;
+    }else{
+      d.paidCash = (d.paidCash || 0) + amount;
+    }
+    if(debtRemaining(d) <= 0) d.settled = true;
+    saveDebts();
+    closeDebtPayForm();
+    renderDebts();
+    renderDashboard();
+    showToast('Pembayaran dicatat');
+  });
+
+  /* ============================================================
+     ADD / EDIT FORM
+  ============================================================ */
+  const formOverlay = document.getElementById('formOverlay');
+  const inputNominal = document.getElementById('inputNominal');
+  const inputKategori = document.getElementById('inputKategori');
+  const inputMakanUntuk = document.getElementById('inputMakanUntuk');
+  const inputSaldoAsal = document.getElementById('inputSaldoAsal');
+  const fieldSaldoAsal = document.getElementById('fieldSaldoAsal');
+  const saldoAsalNote = document.getElementById('saldoAsalNote');
+  const inputTanggal = document.getElementById('inputTanggal');
+  const inputCatatan = document.getElementById('inputCatatan');
+  let currentType = 'masuk';
+  let currentMetode = 'cash';
+  let editingId = null;
+
+  document.querySelectorAll('#formOverlay [data-metode]').forEach(btn=>{
+    btn.addEventListener('click', function(){
+      currentMetode = this.dataset.metode;
+      document.querySelectorAll('#formOverlay [data-metode]').forEach(b=>b.classList.toggle('active', b===this));
+    });
+  });
+
+  function populateCategories(type){
+    inputKategori.innerHTML = '';
+    CATEGORIES[type].forEach(cat=>{
+      const opt = document.createElement('option');
+      opt.value = cat; opt.textContent = cat;
+      inputKategori.appendChild(opt);
+    });
+    updateSaldoAsalVisibility();
+  }
+
+  // Field "Ambil / Tambah dari" (fieldSaldoAsal) hanya relevan untuk kategori "Lainnya".
+  function updateSaldoAsalVisibility(){
+    const isLainnya = inputKategori.value === 'Lainnya';
+    fieldSaldoAsal.style.display = isLainnya ? '' : 'none';
+    if(!isLainnya){
+      inputSaldoAsal.value = '';
+    }
+    updateSaldoAsalNote();
+  }
+
+  function updateSaldoAsalNote(){
+    const target = inputSaldoAsal.value;
+    if(!target){ saldoAsalNote.textContent = ''; return; }
+    if(target === 'Tabungan'){
+      saldoAsalNote.textContent = currentType === 'keluar'
+        ? 'Dana akan dipindahkan ke Uang Tabungan.'
+        : 'Dana akan ditarik dari Uang Tabungan.';
+    }else{
+      saldoAsalNote.textContent = currentType === 'keluar'
+        ? ('Mengurangi sisa batas makan harian ' + target + '.')
+        : ('Menambah sisa batas makan harian ' + target + '.');
+    }
+  }
+
+  inputKategori.addEventListener('change', updateSaldoAsalVisibility);
+  inputSaldoAsal.addEventListener('change', updateSaldoAsalNote);
+
+  document.querySelectorAll('#formOverlay [data-type]').forEach(btn=>{
+    btn.addEventListener('click', function(){
+      currentType = this.dataset.type;
+      document.querySelectorAll('#formOverlay [data-type]').forEach(b=>b.classList.toggle('active', b===this));
+      populateCategories(currentType);
+      updateSaldoAsalNote();
+    });
+  });
+
+  function formatNominalInput(raw){
+    const digits = raw.replace(/[^0-9]/g,'');
+    if(!digits) return '';
+    return Number(digits).toLocaleString('id-ID');
+  }
+  inputNominal.addEventListener('input', function(){
+    const cursorFromEnd = this.value.length - this.selectionStart;
+    this.value = this.value ? 'Rp' + formatNominalInput(this.value) : '';
+    const pos = Math.max(2, this.value.length - cursorFromEnd);
+    this.setSelectionRange(pos,pos);
+  });
+
+  function getNominalValue(){
+    const digits = inputNominal.value.replace(/[^0-9]/g,'');
+    return digits ? Number(digits) : 0;
+  }
+
+  function openForm(id){
+    editingId = id || null;
+    clearFieldErrors();
+
+    if(editingId){
+      const t = transactions.find(x=>x.id===editingId);
+      document.getElementById('formTitle').textContent = 'Edit Transaksi';
+      currentType = t.type;
+      document.querySelectorAll('#formOverlay [data-type]').forEach(b=>b.classList.toggle('active', b.dataset.type===t.type));
+      populateCategories(t.type);
+      inputNominal.value = 'Rp' + t.amount.toLocaleString('id-ID');
+      inputKategori.value = t.category;
+      inputMakanUntuk.value = t.person || 'Iky';
+      inputSaldoAsal.value = t.lainnyaTarget || '';
+      inputTanggal.value = t.date;
+      inputCatatan.value = t.note || '';
+      currentMetode = t.method || 'cash';
+      document.querySelectorAll('#formOverlay [data-metode]').forEach(b=>b.classList.toggle('active', b.dataset.metode===currentMetode));
+      updateSaldoAsalVisibility();
+      inputSaldoAsal.value = t.lainnyaTarget || '';
+      updateSaldoAsalNote();
+    }else{
+      document.getElementById('formTitle').textContent = 'Tambah Transaksi';
+      currentType = 'masuk';
+      document.querySelectorAll('#formOverlay [data-type]').forEach(b=>b.classList.toggle('active', b.dataset.type==='masuk'));
+      populateCategories('masuk');
+      inputNominal.value = '';
+      inputKategori.selectedIndex = 0;
+      inputMakanUntuk.value = 'Iky';
+      inputSaldoAsal.value = '';
+      inputTanggal.value = todayISO();
+      inputCatatan.value = '';
+      currentMetode = 'cash';
+      document.querySelectorAll('#formOverlay [data-metode]').forEach(b=>b.classList.toggle('active', b.dataset.metode==='cash'));
+      updateSaldoAsalVisibility();
+    }
+    formOverlay.classList.add('open');
+    setTimeout(()=> inputNominal.focus(), 200);
+  }
+
+  function closeForm(){
+    formOverlay.classList.remove('open');
+    editingId = null;
+  }
+
+  document.getElementById('addBtnDashboard').addEventListener('click', ()=> openForm());
+  document.getElementById('fabAdd').addEventListener('click', ()=> openForm());
+  document.getElementById('cancelFormBtn').addEventListener('click', closeForm);
+  formOverlay.addEventListener('click', function(e){ if(e.target === formOverlay) closeForm(); });
+
+  /* ============================================================
+     SHARE SHEET (pilih rentang tanggal untuk WhatsApp)
+  ============================================================ */
+  const shareOverlay = document.getElementById('shareOverlay');
+  const shareFromDate = document.getElementById('shareFromDate');
+  const shareToDate = document.getElementById('shareToDate');
+
+  document.getElementById('shareDashboardBtn').addEventListener('click', function(){
+    const range = getPeriodDateRange(dashboardPeriod);
+    shareFromDate.value = range.from;
+    shareToDate.value = range.to;
+    document.getElementById('shareToDate').closest('.field').classList.remove('has-error');
+    shareOverlay.classList.add('open');
+  });
+
+  function closeShareSheet(){
+    shareOverlay.classList.remove('open');
+  }
+  document.getElementById('shareCancelBtn').addEventListener('click', closeShareSheet);
+  shareOverlay.addEventListener('click', function(e){ if(e.target === shareOverlay) closeShareSheet(); });
+
+  document.getElementById('shareConfirmBtn').addEventListener('click', function(){
+    const from = shareFromDate.value;
+    const to = shareToDate.value;
+    const errField = document.getElementById('shareToDate').closest('.field');
+    errField.classList.remove('has-error');
+
+    if(!from || !to || to < from){
+      errField.classList.add('has-error');
+      return;
+    }
+
+    const text = buildShareText(from, to);
+    const url = 'https://wa.me/?text=' + encodeURIComponent(text);
+    window.open(url, '_blank');
+    closeShareSheet();
+  });
+
+  function clearFieldErrors(){
+    document.querySelectorAll('.field').forEach(f=>f.classList.remove('has-error'));
+  }
+
+  document.getElementById('saveBtn').addEventListener('click', function(){
+    clearFieldErrors();
+    let valid = true;
+
+    const amount = getNominalValue();
+    if(!amount || amount <= 0){
+      document.getElementById('fieldNominal').classList.add('has-error');
+      valid = false;
+    }
+    if(!inputKategori.value){
+      document.getElementById('fieldKategori').classList.add('has-error');
+      valid = false;
+    }
+    if(!inputTanggal.value){
+      document.getElementById('fieldTanggal').classList.add('has-error');
+      valid = false;
+    }
+    if(!valid) return;
+
+    const savedDate = inputTanggal.value;
+    const wasEditing = !!editingId;
+    const isFoodOut = currentType === 'keluar' && inputKategori.value === 'Makanan';
+    const txPerson = inputMakanUntuk.value;
+    const txMetode = currentMetode;
+    const txLainnyaTarget = inputKategori.value === 'Lainnya' ? inputSaldoAsal.value : '';
+
+    if(editingId){
+      const t = transactions.find(x=>x.id===editingId);
+      t.type = currentType;
+      t.amount = amount;
+      t.category = inputKategori.value;
+      t.date = inputTanggal.value;
+      t.note = inputCatatan.value.trim();
+      t.person = txPerson;
+      t.method = txMetode;
+      t.lainnyaTarget = txLainnyaTarget;
+      saveTransactions();
+    }else{
+      const t = {
+        id: uid(),
+        type: currentType,
+        amount: amount,
+        category: inputKategori.value,
+        date: inputTanggal.value,
+        note: inputCatatan.value.trim(),
+        person: txPerson,
+        method: txMetode,
+        lainnyaTarget: txLainnyaTarget,
+        createdAt: Date.now()
+      };
+      transactions.push(t);
+      saveTransactions();
+    }
+
+    closeForm();
+    refreshAllViews();
+
+    // Beri tahu jika pengeluaran makan orang tsb hari ini sudah melewati batas harian Rp50.000
+    const defaultMsg = wasEditing ? 'Transaksi berhasil diperbarui' : 'Transaksi berhasil ditambahkan';
+    const isLainnyaFoodOut = currentType === 'keluar' && txLainnyaTarget && txLainnyaTarget !== 'Tabungan';
+    const limitPerson = isFoodOut ? txPerson : (isLainnyaFoodOut ? txLainnyaTarget : null);
+    if(limitPerson && savedDate === todayISO() && getTodaySpentByPerson(limitPerson) > PERSON_DAILY_LIMIT){
+      showToast('Tersimpan — pengeluaran makan ' + limitPerson + ' hari ini melebihi batas Rp50.000');
+    }else{
+      showToast(defaultMsg);
+    }
+  });
+
+  /* ============================================================
+     DELETE CONFIRMATION
+  ============================================================ */
+  const confirmOverlay = document.getElementById('confirmOverlay');
+  let pendingDeleteId = null;
+  let pendingDeleteType = 'tx';
+
+  function openConfirmDelete(id, type){
+    pendingDeleteId = id;
+    pendingDeleteType = type || 'tx';
+    const titleEl = document.getElementById('confirmTitle');
+    const subEl = document.getElementById('confirmSub');
+    if(pendingDeleteType === 'debt'){
+      titleEl.textContent = 'Hapus data ini?';
+      subEl.textContent = 'Tindakan ini tidak bisa dibatalkan. Data utang/piutang akan dihapus secara permanen.';
+    }else{
+      titleEl.textContent = 'Hapus transaksi ini?';
+      subEl.textContent = 'Tindakan ini tidak bisa dibatalkan. Transaksi akan dihapus secara permanen.';
+    }
+    confirmOverlay.classList.add('open');
+  }
+  document.getElementById('cancelDeleteBtn').addEventListener('click', function(){
+    pendingDeleteId = null;
+    confirmOverlay.classList.remove('open');
+  });
+  confirmOverlay.addEventListener('click', function(e){
+    if(e.target === confirmOverlay){ pendingDeleteId = null; confirmOverlay.classList.remove('open'); }
+  });
+  document.getElementById('confirmDeleteBtn').addEventListener('click', function(){
+    if(pendingDeleteId){
+      if(pendingDeleteType === 'debt'){
+        debts = debts.filter(d=>d.id !== pendingDeleteId);
+        saveDebts();
+        showToast('Data utang/piutang dihapus');
+        renderDebts();
+        renderDashboard();
+      }else{
+        transactions = transactions.filter(t=>t.id !== pendingDeleteId);
+        saveTransactions();
+        showToast('Transaksi dihapus');
+        refreshAllViews();
+      }
+    }
+    pendingDeleteId = null;
+    confirmOverlay.classList.remove('open');
+  });
+
+  /* ============================================================
+     TOAST
+  ============================================================ */
+  let toastTimer;
+  function showToast(msg){
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=> el.classList.remove('show'), 2200);
+  }
+
+  /* ============================================================
+     REFRESH / INIT
+  ============================================================ */
+  function refreshAllViews(){
+    renderDashboard();
+    renderHistory();
+    renderStats();
+    renderDebts();
+  }
+
+  function initHeader(){
+    const today = new Date();
+    document.getElementById('todayLabel').textContent = today.toLocaleDateString('id-ID', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  }
+
+  initTheme();
+  initHeader();
+  populateCategories('masuk');
+  inputTanggal.value = todayISO();
+  refreshAllViews();
+
+})();
+</script>
+</body>
+</html>
